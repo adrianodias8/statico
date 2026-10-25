@@ -1,0 +1,1 @@
+<nav><ForEach collection="menu" as="item"><a href="{ url('{item.link}') }"<If condition="item.link == page.url"> class="active"</If>>{item.title}</a></ForEach></nav>

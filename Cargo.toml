@@ -1,0 +1,38 @@
+[package]
+name = "static-rs"
+description = "A fast, single-binary static site generator compatible with DevDojo Static"
+license = "ISC"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+serde_yaml = "0.9"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+regex = "1"
+walkdir = "2"
+rayon = "1"
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "signal", "net", "time"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tower-http = { version = "0.6", features = ["fs"] }
+notify = "8"
+ureq = { version = "3", features = ["platform-verifier"] }
+zip = { version = "4", default-features = false, features = ["deflate"] }
+open = "5"
+mime_guess = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+[[bin]]
+name = "static"
+path = "src/main.rs"

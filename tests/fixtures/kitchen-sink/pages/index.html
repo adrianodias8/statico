@@ -1,0 +1,14 @@
+<layout title="Home" src="base.html">
+<h1>{env.GREETING}</h1>
+<ul class="team">
+<ForEach collection="team" as="m" orderBy="age, desc" where="m.age > 30">
+  <li data-first="{$loop.first}">{loop}. {m.name} ({m.age})<ForEach collection="m.skills" as="s"> #{s}</ForEach><If condition="m.skills.length == 0"> (no skills listed)</If></li>
+</ForEach>
+</ul>
+<h2>Latest posts</h2>
+<ForEach content="blog" as="post" orderBy="date, desc" count="2">
+  <article><a href="{post.link}">{post.title}</a> <If condition="post.featured">★<Else>·</If></article>
+</ForEach>
+<include src="card.html" heading="Card" label="New" />
+<script>const menu = {collections.menu.json}; const obj = {open: true}; if (x) {y}</script>
+</layout>
