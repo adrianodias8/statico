@@ -30,6 +30,12 @@ impl Composer<'_> {
 
     /// Load a page file and apply `<page>`, `<layout>` and `<include>`.
     pub fn compose_page(&self, path: &Path) -> Result<String> {
+        Ok(self.compose_page_with_attrs(path)?.0)
+    }
+
+    /// Like [`compose_page`], also returning the page's own `<layout>`
+    /// attributes (e.g. `title`), used for `{page.title}` and `{seo}`.
+    pub fn compose_page_with_attrs(&self, path: &Path) -> Result<(String, Vec<(String, String)>)> {
         let origin = self.rel(path);
         let mut src =
             std::fs::read_to_string(path).with_context(|| format!("cannot read `{origin}`"))?;
@@ -50,7 +56,11 @@ impl Composer<'_> {
             )?;
         }
 
-        self.apply_layouts(src, &origin, 0)
+        let attrs = find_tag_from(&src, 0, &["layout"])
+            .filter(|t| !t.closing)
+            .map(|t| t.attrs)
+            .unwrap_or_default();
+        Ok((self.apply_layouts(src, &origin, 0)?, attrs))
     }
 
     fn apply_layouts(&self, src: String, origin: &str, depth: usize) -> Result<String> {
@@ -86,9 +96,9 @@ impl Composer<'_> {
         let mut out = if layout.contains("{slot}") {
             layout.replacen("{slot}", &body, 1)
         } else {
-            eprintln!(
-                "warning: {layout_origin} has no {{slot}}; the content of {origin} is dropped"
-            );
+            crate::diag::warn(format!(
+                "{layout_origin}: has no {{slot}}; the content of {origin} is dropped"
+            ));
             layout
         };
         for (k, v) in &open.attrs {
@@ -158,7 +168,9 @@ impl Composer<'_> {
                 .join("includes")
                 .join(file.trim_start_matches('/'));
             if lenient && !path.is_file() {
-                eprintln!("warning: {origin}: includes/{file} not found; leaving the tag as-is");
+                crate::diag::warn(format!(
+                    "{origin}: includes/{file} not found; leaving the tag as-is"
+                ));
                 out.push_str(&src[tag.start..pos]);
                 continue;
             }

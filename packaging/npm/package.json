@@ -1,0 +1,11 @@
+{
+  "name": "forno",
+  "version": "0.1.0",
+  "description": "Forno — bake plain HTML into fast static sites. Installs the native forno binary.",
+  "bin": { "forno": "bin/forno.js" },
+  "scripts": { "postinstall": "node install.js" },
+  "files": ["bin/forno.js", "install.js"],
+  "engines": { "node": ">=18" },
+  "license": "ISC",
+  "keywords": ["static-site-generator", "ssg", "html", "tailwind", "markdown"]
+}

@@ -1,17 +1,17 @@
-//! A Static project on disk: routing, data loading and page rendering.
-//! Shared by `static dev` (render on request) and `static build`.
+//! A Forno project on disk: routing, data loading and page rendering.
+//! Shared by `forno dev` (render on request) and `forno build`.
 
 use anyhow::{Context, Result, bail};
 use regex::Regex;
 use serde_json::{Map, Value, json};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Component, Path, PathBuf};
-use std::sync::{LazyLock, RwLock};
+use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 use walkdir::WalkDir;
 
 use crate::config::{Config, load_env};
 use crate::markdown;
-use crate::template::{self, DataSource, Scope, compose::Composer};
+use crate::template::{self, DataSource, Scope, compose::Composer, filters};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -21,7 +21,7 @@ pub enum Mode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tailwind {
-    /// `@tailwind base;` + `tailwind.config.js` (all official templates today).
+    /// `@tailwind base;` + `tailwind.config.js` (all official Static templates).
     V3,
     /// `@import "tailwindcss";`
     V4,
@@ -33,6 +33,21 @@ pub enum Tailwind {
 pub enum Source {
     Page(PathBuf),
     Content(PathBuf),
+    /// One page per taxonomy term: `pages/tags/[tag].html` rendered for `slug`.
+    Term {
+        template: PathBuf,
+        var: String,
+        slug: String,
+    },
+}
+
+impl Source {
+    pub fn path(&self) -> &Path {
+        match self {
+            Source::Page(p) | Source::Content(p) => p,
+            Source::Term { template, .. } => template,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -44,6 +59,29 @@ pub struct Route {
     pub source: Source,
 }
 
+/// A rendered page plus the metadata feeds, llms.txt, search and SEO use.
+#[derive(Debug, Clone, Default)]
+pub struct Rendered {
+    pub html: String,
+    pub title: String,
+    pub description: String,
+    /// Total pages when the page uses `<ForEach paginate>` (1 otherwise).
+    pub total_pages: usize,
+    /// Markdown source (content pages only), for `.md` mirrors.
+    pub markdown: Option<String>,
+    pub date: Option<String>,
+}
+
+/// A taxonomy term (`tags: [rust, web]` → `rust`, `web`).
+#[derive(Debug, Clone)]
+pub struct Term {
+    pub name: String,
+    pub slug: String,
+    pub count: usize,
+}
+
+type CacheCell = Arc<OnceLock<Result<Value, String>>>;
+
 pub struct Site {
     pub root: PathBuf,
     pub config: Config,
@@ -54,7 +92,11 @@ pub struct Site {
     /// Set by the build once main.css has been compiled.
     pub css_compiled: std::sync::atomic::AtomicBool,
     env: Map<String, Value>,
-    cache: RwLock<HashMap<String, Value>>,
+    /// Single-flight cache: parallel pages needing the same collection wait
+    /// for one computation instead of all doing it.
+    cache: Mutex<HashMap<String, CacheCell>>,
+    md_cache: Mutex<HashMap<u64, Arc<markdown::Rendered>>>,
+    highlight: Option<String>,
 }
 
 impl Site {
@@ -64,7 +106,7 @@ impl Site {
             .with_context(|| format!("cannot open project at {}", root.display()))?;
         if !root.join("pages").is_dir() {
             bail!(
-                "no `pages` directory in {}\n  Run this inside a Static project, or create one with `static new my-site`.",
+                "no `pages` directory in {}\n  Run this inside a Forno project, or create one with `forno new my-site` (or `forno init`).",
                 root.display()
             );
         }
@@ -84,22 +126,32 @@ impl Site {
         } else {
             base_url
         };
-        let tailwind = detect_tailwind(&root);
-        let env = load_env(&root);
+        let highlight = config.markdown.theme();
+        if let Some(t) = &highlight
+            && !markdown::theme_names().contains(t)
+        {
+            bail!(
+                "unknown code highlighting theme `{t}` in forno.json. Available: {}",
+                markdown::theme_names().join(", ")
+            );
+        }
         Ok(Site {
+            tailwind: detect_tailwind(&root),
+            env: load_env(&root),
             root,
             config,
             mode,
             base_url,
-            tailwind,
             css_compiled: false.into(),
-            env,
-            cache: RwLock::new(HashMap::new()),
+            cache: Mutex::new(HashMap::new()),
+            md_cache: Mutex::new(HashMap::new()),
+            highlight,
         })
     }
 
     pub fn clear_cache(&self) {
-        self.cache.write().unwrap().clear();
+        self.cache.lock().unwrap().clear();
+        self.md_cache.lock().unwrap().clear();
     }
 
     pub fn rel(&self, p: &Path) -> String {
@@ -110,21 +162,53 @@ impl Site {
             .replace('\\', "/")
     }
 
-    fn cached(&self, key: &str, f: impl FnOnce() -> Result<Value>) -> Result<Value> {
-        if let Some(v) = self.cache.read().unwrap().get(key) {
-            return Ok(v.clone());
+    /// `https://example.com/x` for absolute builds, `/x` otherwise.
+    pub fn abs_url(&self, path: &str) -> String {
+        if self.base_url == "relative"
+            || path.starts_with("http://")
+            || path.starts_with("https://")
+        {
+            path.to_string()
+        } else {
+            format!("{}{}", self.base_url, path)
         }
-        let v = f()?;
-        self.cache
-            .write()
+    }
+
+    pub fn site_str(&self, key: &str) -> Option<String> {
+        self.config
+            .site
+            .get(key)
+            .and_then(|v| v.as_str())
+            .map(str::to_string)
+    }
+
+    fn cached(&self, key: &str, f: impl FnOnce() -> Result<Value>) -> Result<Value> {
+        let cell = self
+            .cache
+            .lock()
             .unwrap()
-            .insert(key.to_string(), v.clone());
-        Ok(v)
+            .entry(key.to_string())
+            .or_default()
+            .clone();
+        cell.get_or_init(|| f().map_err(|e| format!("{e:#}")))
+            .clone()
+            .map_err(|e| anyhow::anyhow!(e))
+    }
+
+    /// Markdown → HTML, memoised by content (collections and pages share it).
+    pub fn render_markdown(&self, md: &str) -> Arc<markdown::Rendered> {
+        let key = crate::postprocess::fnv1a(md.as_bytes());
+        if let Some(r) = self.md_cache.lock().unwrap().get(&key) {
+            return r.clone();
+        }
+        let r = Arc::new(markdown::render_with(md, self.highlight.as_deref()));
+        self.md_cache.lock().unwrap().insert(key, r.clone());
+        r
     }
 
     // ---------------------------------------------------------------- routing
 
-    /// Every page the build should write.
+    /// Every page the build should write (before pagination expands them).
     pub fn routes(&self) -> Result<Vec<Route>> {
         let mut routes: Vec<Route> = Vec::new();
         let pages = self.root.join("pages");
@@ -136,10 +220,9 @@ impl Site {
             }
             let name = p.file_name().unwrap().to_string_lossy();
             if name.contains('[') {
-                continue; // `[content].html` and friends are templates, not routes
+                continue; // `[content].html`, `[tag].html` are templates
             }
-            let rel = p.strip_prefix(&pages)?.with_extension("");
-            let rel = to_url_path(&rel);
+            let rel = to_url_path(&p.strip_prefix(&pages)?.with_extension(""));
             let (url, out) = if rel == "404" {
                 ("/404.html".to_string(), PathBuf::from("404.html"))
             } else {
@@ -152,150 +235,382 @@ impl Site {
             });
         }
 
-        let content = self.root.join("content");
-        if content.is_dir() {
-            for e in WalkDir::new(&content).sort_by_file_name() {
-                let e = e?;
-                let p = e.path();
-                if !e.file_type().is_file() || p.extension().and_then(|x| x.to_str()) != Some("md")
-                {
-                    continue;
-                }
-                if self.mode == Mode::Build && self.is_draft(p)? {
-                    continue;
-                }
-                let rel = to_url_path(&p.strip_prefix(&content)?.with_extension(""));
-                let (url, out) = route_for(&rel);
-                // Content wins over a page with the same URL (as in `static dev`).
-                if let Some(existing) = routes.iter().position(|r| r.url == url) {
-                    eprintln!(
-                        "warning: {} and {} both map to {url}; using the markdown file",
-                        self.rel(match &routes[existing].source {
-                            Source::Page(p) | Source::Content(p) => p,
-                        }),
-                        self.rel(p)
-                    );
-                    routes.remove(existing);
-                }
+        for p in self.content_files()? {
+            if self.mode == Mode::Build && self.is_draft(&p)? {
+                continue;
+            }
+            let rel = to_url_path(
+                &p.strip_prefix(self.root.join("content"))?
+                    .with_extension(""),
+            );
+            let (url, out) = route_for(&rel);
+            // Content wins over a page with the same URL (as in `forno dev`).
+            if let Some(existing) = routes.iter().position(|r| r.url == url) {
+                crate::diag::warn(format!(
+                    "{}: maps to {url} like {}; using the markdown file",
+                    self.rel(&p),
+                    self.rel(routes[existing].source.path()),
+                ));
+                routes.remove(existing);
+            }
+            routes.push(Route {
+                url,
+                out,
+                source: Source::Content(p),
+            });
+        }
+
+        for (template, var, dir_url) in self.term_templates()? {
+            for term in self.terms(&var)? {
+                let url = format!("{dir_url}{}/", term.slug);
                 routes.push(Route {
+                    out: PathBuf::from(url.trim_start_matches('/')).join("index.html"),
                     url,
-                    out,
-                    source: Source::Content(p.to_path_buf()),
+                    source: Source::Term {
+                        template: template.clone(),
+                        var: var.clone(),
+                        slug: term.slug,
+                    },
                 });
             }
         }
         Ok(routes)
     }
 
-    fn is_draft(&self, md: &Path) -> Result<bool> {
+    pub fn content_files(&self) -> Result<Vec<PathBuf>> {
+        let content = self.root.join("content");
+        let mut files = Vec::new();
+        if content.is_dir() {
+            for e in WalkDir::new(&content).sort_by_file_name() {
+                let e = e?;
+                if e.file_type().is_file()
+                    && e.path().extension().and_then(|x| x.to_str()) == Some("md")
+                {
+                    files.push(e.path().to_path_buf());
+                }
+            }
+        }
+        Ok(files)
+    }
+
+    fn front_matter(&self, md: &Path) -> Result<Map<String, Value>> {
         let src = std::fs::read_to_string(md)?;
-        let doc = markdown::parse_front_matter(&src, &self.rel(md))?;
-        Ok(doc
-            .front_matter
+        Ok(markdown::parse_front_matter(&src, &self.rel(md))?.front_matter)
+    }
+
+    fn is_draft(&self, md: &Path) -> Result<bool> {
+        Ok(self
+            .front_matter(md)?
             .get("draft")
             .is_some_and(template::expr::truthy))
     }
 
-    /// Map a request path to a source file (used by the dev server).
-    pub fn resolve(&self, url_path: &str) -> Option<Source> {
+    /// `pages/**/[name].html` (other than `[content]`): (template, var, URL dir).
+    pub fn term_templates(&self) -> Result<Vec<(PathBuf, String, String)>> {
+        let pages = self.root.join("pages");
+        let mut out = Vec::new();
+        for e in WalkDir::new(&pages).sort_by_file_name() {
+            let e = e?;
+            let name = e.file_name().to_string_lossy().to_string();
+            let Some(var) = name
+                .strip_prefix('[')
+                .and_then(|n| n.strip_suffix("].html"))
+            else {
+                continue;
+            };
+            if var == "content" || var.is_empty() {
+                continue;
+            }
+            let dir = to_url_path(e.path().parent().unwrap().strip_prefix(&pages)?);
+            let dir_url = if dir.is_empty() {
+                "/".into()
+            } else {
+                format!("/{dir}/")
+            };
+            out.push((e.path().to_path_buf(), var.to_string(), dir_url));
+        }
+        Ok(out)
+    }
+
+    /// All terms for a taxonomy across `content/`. `name` may be singular or
+    /// plural: `tag`/`tags`, `category`/`categories`.
+    pub fn terms(&self, name: &str) -> Result<Vec<Term>> {
+        let v = self.cached(&format!("terms:{name}"), || {
+            let keys = taxonomy_keys(name);
+            let mut counts: BTreeMap<String, (String, usize)> = BTreeMap::new();
+            for f in self.content_files()? {
+                let fm = self.front_matter(&f)?;
+                if self.mode == Mode::Build && fm.get("draft").is_some_and(template::expr::truthy) {
+                    continue;
+                }
+                for key in &keys {
+                    let Some(v) = fm.get(key) else { continue };
+                    let names: Vec<String> = match v {
+                        Value::Array(a) => a.iter().map(template::value_to_string).collect(),
+                        Value::String(s) => vec![s.clone()],
+                        _ => vec![],
+                    };
+                    for n in names.into_iter().filter(|n| !n.trim().is_empty()) {
+                        let slug = filters::slugify(&n);
+                        counts.entry(slug).or_insert((n, 0)).1 += 1;
+                    }
+                    break;
+                }
+            }
+            let mut terms: Vec<Value> = counts
+                .into_iter()
+                .map(|(slug, (name, count))| json!({"name": name, "slug": slug, "count": count}))
+                .collect();
+            // Most used first, then alphabetical.
+            terms.sort_by(|a, b| {
+                b["count"]
+                    .as_u64()
+                    .cmp(&a["count"].as_u64())
+                    .then_with(|| a["slug"].as_str().cmp(&b["slug"].as_str()))
+            });
+            Ok(Value::Array(terms))
+        })?;
+        Ok(v.as_array()
+            .unwrap()
+            .iter()
+            .map(|t| Term {
+                name: t["name"].as_str().unwrap_or_default().to_string(),
+                slug: t["slug"].as_str().unwrap_or_default().to_string(),
+                count: t["count"].as_u64().unwrap_or(0) as usize,
+            })
+            .collect())
+    }
+
+    fn term_url(&self, var: &str, slug: &str) -> Option<String> {
+        let names = taxonomy_keys(var);
+        self.term_templates()
+            .ok()?
+            .into_iter()
+            .find(|(_, v, _)| names.contains(v) || taxonomy_keys(v).contains(&var.to_string()))
+            .map(|(_, _, dir)| format!("{dir}{slug}/"))
+    }
+
+    /// Map a request path to a source (dev server). Returns the page number
+    /// for `/blog/page/2/`.
+    pub fn resolve(&self, url_path: &str) -> Option<(Source, usize)> {
         let clean = sanitize_url_path(url_path)?;
-        let route = if clean.is_empty() {
-            "index".to_string()
-        } else {
-            clean
-        };
+        if let Some(src) = self.resolve_plain(&clean) {
+            return Some((src, 1));
+        }
+        // `/blog/page/3` → `/blog` page 3
+        let parts: Vec<&str> = clean.split('/').collect();
+        if parts.len() >= 2
+            && parts[parts.len() - 2] == "page"
+            && let Ok(n) = parts[parts.len() - 1].parse::<usize>()
+            && n >= 1
+        {
+            let base = parts[..parts.len() - 2].join("/");
+            if let Some(src) = self.resolve_plain(&base) {
+                return Some((src, n));
+            }
+        }
+        None
+    }
+
+    fn resolve_plain(&self, clean: &str) -> Option<Source> {
+        let route = if clean.is_empty() { "index" } else { clean };
         let content = self.root.join("content");
         let pages = self.root.join("pages");
         let candidates = [
             Source::Content(content.join(format!("{route}.md"))),
-            Source::Content(content.join(&route).join("index.md")),
+            Source::Content(content.join(route).join("index.md")),
             Source::Page(pages.join(format!("{route}.html"))),
-            Source::Page(pages.join(&route).join("index.html")),
+            Source::Page(pages.join(route).join("index.html")),
         ];
-        candidates.into_iter().find(|s| match s {
-            Source::Page(p) => p.is_file() && !p.to_string_lossy().contains('['),
-            Source::Content(p) => p.is_file(),
-        })
+        if let Some(s) = candidates.into_iter().find(|s| {
+            let p = s.path();
+            p.is_file() && !p.file_name().unwrap().to_string_lossy().contains('[')
+        }) {
+            return Some(s);
+        }
+        // Taxonomy term: `/tags/rust` with `pages/tags/[tag].html`.
+        let (dir, slug) = match clean.rsplit_once('/') {
+            Some((d, s)) => (format!("/{d}/"), s),
+            None => ("/".to_string(), clean),
+        };
+        for (template, var, dir_url) in self.term_templates().ok()? {
+            if dir_url == dir && self.terms(&var).ok()?.iter().any(|t| t.slug == slug) {
+                return Some(Source::Term {
+                    template,
+                    var,
+                    slug: slug.to_string(),
+                });
+            }
+        }
+        None
     }
 
     // -------------------------------------------------------------- rendering
 
-    pub fn render(&self, source: &Source, url: &str) -> Result<String> {
-        match source {
-            Source::Page(p) => self.render_page(p, url),
-            Source::Content(p) => self.render_content(p, url),
+    /// Render page `page` (1-based) of a source at `url` (its first-page URL).
+    pub fn render(&self, source: &Source, url: &str, page: usize) -> Result<Rendered> {
+        let mut r = self.render_pass(source, url, page, None)?;
+        if r.total_pages > 1 || page > 1 {
+            if page > r.total_pages {
+                bail!(
+                    "{}: page {page} does not exist (only {})",
+                    self.rel(source.path()),
+                    r.total_pages
+                );
+            }
+            // Second pass with `{pagination.*}` filled in.
+            r = self.render_pass(source, url, page, Some(r.total_pages))?;
         }
+        Ok(r)
     }
 
-    fn base_scope<'a>(&'a self, origin: &str, url: &str, source: &Path) -> Scope<'a> {
+    fn base_scope<'a>(&'a self, origin: &str, url: &str, source: &Path, page: usize) -> Scope<'a> {
         let mut scope = Scope::new(self, origin);
+        scope.base_url = self.base_url.clone();
+        scope.page_number = page;
         scope.set("env", Value::Object(self.env.clone()));
         scope.set("site", self.config.site.clone());
         scope.set(
             "page",
-            json!({"url": url, "path": self.rel(source), "mode": if self.mode == Mode::Dev {"dev"} else {"build"}}),
+            json!({
+                "url": page_url(url, page),
+                "path": self.rel(source),
+                "mode": if self.mode == Mode::Dev {"dev"} else {"build"},
+            }),
         );
         scope
     }
 
-    pub fn render_page(&self, path: &Path, url: &str) -> Result<String> {
-        let origin = self.rel(path);
-        self.validate(path)?;
-        let html = Composer { root: &self.root }.compose_page(path)?;
+    fn render_pass(
+        &self,
+        source: &Source,
+        url: &str,
+        page: usize,
+        total: Option<usize>,
+    ) -> Result<Rendered> {
+        let composer = Composer { root: &self.root };
+        let (tpl_path, md) = match source {
+            Source::Page(p) => (p.clone(), None),
+            Source::Term { template, .. } => (template.clone(), None),
+            Source::Content(md_path) => {
+                let tpl = self.page_for_content(md_path).with_context(|| {
+                    format!(
+                        "{}: no page template found. Create `pages/{}.html` or a `[content].html` in the matching pages folder.",
+                        self.rel(md_path),
+                        to_url_path(&md_path.strip_prefix(self.root.join("content")).unwrap_or(md_path).with_extension(""))
+                    )
+                })?;
+                (tpl, Some(md_path.clone()))
+            }
+        };
+        let origin = self.rel(&tpl_path);
+        self.validate(&tpl_path)?;
+        let (mut html, layout_attrs) = composer.compose_page_with_attrs(&tpl_path)?;
+        let mut scope = self.base_scope(&origin, url, source.path(), page);
+
+        let mut fm = Value::Null;
+        let mut md_source = None;
+        let mut toc = Value::Array(vec![]);
+        if let Some(md_path) = &md {
+            let md_origin = self.rel(md_path);
+            let src = std::fs::read_to_string(md_path)
+                .with_context(|| format!("cannot read {md_origin}"))?;
+            let doc = markdown::parse_front_matter(&src, &md_origin)?;
+            self.check_schema(md_path, &doc.front_matter)?;
+            let rendered = self.render_markdown(&doc.body);
+            let content_html = composer.resolve_includes_lenient(&rendered.html, &md_origin)?;
+            fm = Value::Object(doc.front_matter);
+            toc = rendered.toc.clone();
+            if html.contains("{static_content_element}") {
+                let el = format!(
+                    "<div id=\"static-content\" style=\"display:none;\" data-toc=\"{}\" data-frontmatter=\"{}\"></div>",
+                    attr_escape(&toc.to_string()),
+                    attr_escape(&fm.to_string())
+                );
+                html = html.replace("{static_content_element}", &el);
+            }
+            scope.set("frontmatter", fm.clone());
+            scope.set("toc", toc.clone());
+            scope.set("content", Value::String(content_html));
+            md_source = Some(doc.body);
+        }
+        if let Source::Term { var, slug, .. } = source {
+            let term = self
+                .terms(var)?
+                .into_iter()
+                .find(|t| &t.slug == slug)
+                .with_context(|| format!("{origin}: no `{var}` called `{slug}`"))?;
+            scope.set(var.clone(), Value::String(term.name.clone()));
+            scope.set(
+                "term",
+                json!({"name": term.name, "slug": term.slug, "count": term.count, "url": url}),
+            );
+        }
+        if let Some(total) = total {
+            scope.set("pagination", pagination_value(url, page, total));
+        }
+
+        // Title & description for {page.title}, {seo}, feeds and llms.txt.
+        let raw_title = layout_attrs
+            .iter()
+            .find(|(k, _)| k == "title")
+            .map(|(_, v)| v.clone())
+            .or_else(|| fm.get("title").map(template::value_to_string))
+            .unwrap_or_default();
+        let title = template::substitute(&raw_title, &scope);
+        let description = ["description", "excerpt", "summary"]
+            .iter()
+            .find_map(|k| fm.get(*k).map(template::value_to_string))
+            .or_else(|| {
+                layout_attrs
+                    .iter()
+                    .find(|(k, _)| k == "description")
+                    .map(|(_, v)| template::substitute(v, &scope))
+            })
+            .or_else(|| self.site_str("description"))
+            .unwrap_or_default();
+        scope.set("page.title", Value::String(title.clone()));
+        scope.set("page.description", Value::String(description.clone()));
+        if html.contains("{seo}") {
+            let seo = crate::seo::tags(
+                self,
+                &crate::seo::PageMeta {
+                    title: &title,
+                    description: &description,
+                    url: &page_url(url, page),
+                    front_matter: &fm,
+                    is_article: md.is_some() && fm.get("date").is_some(),
+                },
+            );
+            scope.set("seo", Value::String(seo));
+        }
+
         let html = self.shortcodes(&html);
         let nodes = template::parse(&html, &origin)?;
-        let mut scope = self.base_scope(&origin, url, path);
-        let mut out = String::with_capacity(html.len());
-        template::render(&nodes, &mut scope, &mut out)?;
-        Ok(self.finish(out))
-    }
-
-    pub fn render_content(&self, md_path: &Path, url: &str) -> Result<String> {
-        let origin = self.rel(md_path);
-        let src =
-            std::fs::read_to_string(md_path).with_context(|| format!("cannot read {origin}"))?;
-        let doc = markdown::parse_front_matter(&src, &origin)?;
-        let rendered = markdown::render(&doc.body);
-        let composer = Composer { root: &self.root };
-        let content_html = composer.resolve_includes_lenient(&rendered.html, &origin)?;
-
-        let template_path = self.page_for_content(md_path).with_context(|| {
-            format!(
-                "{origin}: no page template found. Create `pages/{}.html` or a `[content].html` in the matching pages folder.",
-                to_url_path(&md_path.strip_prefix(self.root.join("content")).unwrap_or(md_path).with_extension(""))
-            )
-        })?;
-        let tpl_origin = self.rel(&template_path);
-        self.validate(&template_path)?;
-        let fm = Value::Object(doc.front_matter);
-
-        let mut html = composer.compose_page(&template_path)?;
-        if html.contains("{static_content_element}") {
-            let el = format!(
-                "<div id=\"static-content\" style=\"display:none;\" data-toc=\"{}\" data-frontmatter=\"{}\"></div>",
-                attr_escape(&rendered.toc.to_string()),
-                attr_escape(&fm.to_string())
-            );
-            html = html.replace("{static_content_element}", &el);
-        }
-        let html = self.shortcodes(&html);
-        let nodes = template::parse(&html, &tpl_origin)?;
-
-        let mut scope = self.base_scope(&tpl_origin, url, md_path);
-        scope.set("frontmatter", fm.clone());
-        scope.set("toc", rendered.toc.clone());
-        scope.set("content", Value::String(content_html));
         let mut out = String::with_capacity(html.len() * 2);
         template::render(&nodes, &mut scope, &mut out)?;
+        let total_pages = scope
+            .paginated
+            .map(|(per, n)| n.div_ceil(per).max(1))
+            .unwrap_or(1);
 
-        // Same globals the original exposed, but emitted as safe JS literals.
-        let script = format!(
-            "<script>window.toc = {}; window.frontmatter = {};</script>\n",
-            script_json(&rendered.toc),
-            script_json(&fm)
-        );
-        out = insert_before(&out, "</head>", &script);
-        Ok(self.finish(out))
+        if md.is_some() {
+            // Same globals the original exposed, but emitted as safe JS literals.
+            let script = format!(
+                "<script>window.toc = {}; window.frontmatter = {};</script>\n",
+                script_json(&toc),
+                script_json(&fm)
+            );
+            out = insert_before(&out, "</head>", &script);
+        }
+        Ok(Rendered {
+            html: parse_urls(&out, &self.base_url),
+            title,
+            description,
+            total_pages,
+            markdown: md_source,
+            date: fm.get("date").map(template::value_to_string),
+        })
     }
 
     /// Check `<ForEach>`/`<If>` nesting in the raw file first, so errors point at
@@ -303,6 +618,62 @@ impl Site {
     fn validate(&self, path: &Path) -> Result<()> {
         if let Ok(src) = std::fs::read_to_string(path) {
             template::parse(&src, &self.rel(path))?;
+        }
+        Ok(())
+    }
+
+    /// Validate front matter against `schemas` in forno.json.
+    pub fn check_schema(&self, md: &Path, fm: &Map<String, Value>) -> Result<()> {
+        let Ok(rel) = md.strip_prefix(self.root.join("content")) else {
+            return Ok(());
+        };
+        let folder = to_url_path(rel.parent().unwrap_or(Path::new("")));
+        let Some(Value::Object(schema)) = self
+            .config
+            .schemas
+            .iter()
+            .filter(|(k, _)| folder == **k || folder.starts_with(&format!("{k}/")))
+            .max_by_key(|(k, _)| k.len())
+            .map(|(_, v)| v)
+        else {
+            return Ok(());
+        };
+        let mut problems = Vec::new();
+        for (field, ty) in schema {
+            let ty = ty.as_str().unwrap_or("any");
+            let (ty, optional) = match ty.strip_suffix('?') {
+                Some(t) => (t, true),
+                None => (ty, false),
+            };
+            match fm.get(field) {
+                None | Some(Value::Null) if optional => {}
+                None | Some(Value::Null) => {
+                    problems.push(format!("missing required field `{field}` ({ty})"))
+                }
+                Some(v) => {
+                    let ok = match ty {
+                        "string" | "text" => v.is_string(),
+                        "number" => v.is_number(),
+                        "bool" | "boolean" => v.is_boolean(),
+                        "list" | "array" => v.is_array(),
+                        "date" => v.as_str().and_then(filters::parse_date).is_some(),
+                        "url" => v
+                            .as_str()
+                            .is_some_and(|s| s.starts_with('/') || s.starts_with("http")),
+                        _ => true,
+                    };
+                    if !ok {
+                        problems.push(format!("field `{field}` must be a {ty} (got {v})"));
+                    }
+                }
+            }
+        }
+        if !problems.is_empty() {
+            bail!(
+                "{}: front matter does not match the `{folder}` schema in forno.json: {} [F201]",
+                self.rel(md),
+                problems.join("; ")
+            );
         }
         Ok(())
     }
@@ -335,10 +706,6 @@ impl Site {
             }
             dir = parent;
         }
-    }
-
-    fn finish(&self, html: String) -> String {
-        parse_urls(&html, &self.base_url)
     }
 
     /// `{tailwindcss}`
@@ -403,7 +770,7 @@ impl Site {
 
     // ------------------------------------------------------------------ data
 
-    fn load_content_collection(&self, dir: &str) -> Result<Value> {
+    pub fn load_content_collection(&self, dir: &str) -> Result<Value> {
         let path = self.root.join("content").join(dir.trim_matches('/'));
         if !path.is_dir() {
             bail!("content folder `{}` does not exist", self.rel(&path));
@@ -413,40 +780,105 @@ impl Site {
             .filter(|p| p.is_file() && p.extension().and_then(|x| x.to_str()) == Some("md"))
             .collect();
         files.sort();
-        let mut items = Vec::new();
-        for f in files {
-            let origin = self.rel(&f);
-            let src = std::fs::read_to_string(&f)?;
-            let doc = markdown::parse_front_matter(&src, &origin)?;
-            let mut item = doc.front_matter;
-            if self.mode == Mode::Build && item.get("draft").is_some_and(template::expr::truthy) {
-                continue;
-            }
-            let rel = to_url_path(
-                &f.strip_prefix(self.root.join("content"))?
-                    .with_extension(""),
-            );
-            let slug = f.file_stem().unwrap().to_string_lossy().to_string();
-            item.insert(
-                "link".into(),
-                Value::String(format!(
+        use rayon::prelude::*;
+        let loaded: Vec<Result<Option<Value>>> = files
+            .par_iter()
+            .map(|f| {
+                let origin = self.rel(f);
+                let src = std::fs::read_to_string(f)?;
+                let doc = markdown::parse_front_matter(&src, &origin)?;
+                let mut item = doc.front_matter;
+                if self.mode == Mode::Build && item.get("draft").is_some_and(template::expr::truthy)
+                {
+                    return Ok(None);
+                }
+                let rel = to_url_path(
+                    &f.strip_prefix(self.root.join("content"))?
+                        .with_extension(""),
+                );
+                let slug = f.file_stem().unwrap().to_string_lossy().to_string();
+                let link = format!(
                     "/{}",
                     rel.trim_end_matches("/index").trim_end_matches("index")
-                )),
-            );
-            item.insert("slug".into(), Value::String(slug));
-            item.insert(
-                "html".into(),
-                Value::String(markdown::render(&doc.body).html),
-            );
-            item.insert("content".into(), Value::String(doc.body));
-            items.push(Value::Object(item));
+                );
+                let rendered = self.render_markdown(&doc.body);
+                item.insert("link".into(), Value::String(link.clone()));
+                item.insert(
+                    "url".into(),
+                    Value::String(format!("{}/", link.trim_end_matches('/'))),
+                );
+                item.insert("slug".into(), Value::String(slug));
+                item.insert("html".into(), Value::String(rendered.html.clone()));
+                item.insert("content".into(), Value::String(doc.body));
+                Ok(Some(Value::Object(item)))
+            })
+            .collect();
+        let mut items = Vec::with_capacity(loaded.len());
+        for r in loaded {
+            if let Some(v) = r? {
+                items.push(v);
+            }
         }
         // Original behaviour: sort by `date` (ascending) when present.
         if items.iter().any(|i| i.get("date").is_some()) {
             template::order_by(&mut items, "date");
         }
         Ok(Value::Array(items))
+    }
+
+    /// `collections/<name>.{json,yaml,yml,toml,csv}`
+    fn load_data_file(&self, name: &str) -> Result<Value> {
+        let dir = self.root.join("collections");
+        for ext in ["json", "yaml", "yml", "toml", "csv"] {
+            let p = dir.join(format!("{name}.{ext}"));
+            if !p.is_file() {
+                continue;
+            }
+            let rel = self.rel(&p);
+            let text =
+                std::fs::read_to_string(&p).with_context(|| format!("cannot read `{rel}`"))?;
+            let v: Value = match ext {
+                "json" => serde_json::from_str(&text)
+                    .with_context(|| format!("`{rel}` is not valid JSON"))?,
+                "yaml" | "yml" => serde_yaml::from_str(&text)
+                    .with_context(|| format!("`{rel}` is not valid YAML"))?,
+                "toml" => {
+                    let t: toml::Table = toml::from_str(&text)
+                        .with_context(|| format!("`{rel}` is not valid TOML"))?;
+                    let v = serde_json::to_value(t)?;
+                    // A TOML file with a single array-of-tables is a list.
+                    match v.as_object() {
+                        Some(m)
+                            if m.len() == 1 && m.values().next().is_some_and(Value::is_array) =>
+                        {
+                            m.values().next().unwrap().clone()
+                        }
+                        _ => v,
+                    }
+                }
+                _ => {
+                    let mut rdr = csv::Reader::from_reader(text.as_bytes());
+                    let headers = rdr.headers()?.clone();
+                    let mut rows = Vec::new();
+                    for rec in rdr.records() {
+                        let rec = rec.with_context(|| format!("`{rel}` is not valid CSV"))?;
+                        let mut m = Map::new();
+                        for (h, v) in headers.iter().zip(rec.iter()) {
+                            let val = v
+                                .parse::<i64>()
+                                .map(Value::from)
+                                .or_else(|_| v.parse::<f64>().map(Value::from))
+                                .unwrap_or_else(|_| Value::String(v.to_string()));
+                            m.insert(h.to_string(), val);
+                        }
+                        rows.push(Value::Object(m));
+                    }
+                    Value::Array(rows)
+                }
+            };
+            return Ok(v);
+        }
+        bail!("no collection `{name}`: create collections/{name}.json (or .yaml, .toml, .csv)")
     }
 }
 
@@ -457,11 +889,20 @@ impl DataSource for Site {
             if let Some(dir) = name.strip_prefix("content/") {
                 return self.load_content_collection(dir);
             }
-            let p = self.root.join("collections").join(format!("{name}.json"));
-            let text = std::fs::read_to_string(&p)
-                .with_context(|| format!("cannot read collection `{}`", self.rel(&p)))?;
-            serde_json::from_str(&text)
-                .with_context(|| format!("`{}` is not valid JSON", self.rel(&p)))
+            // `taxonomy/tags` → [{name, slug, count, url}]
+            if let Some(tax) = name.strip_prefix("taxonomy/") {
+                let terms = self.terms(tax)?;
+                return Ok(Value::Array(
+                    terms
+                        .into_iter()
+                        .map(|t| {
+                            let url = self.term_url(tax, &t.slug).unwrap_or_default();
+                            json!({"name": t.name, "slug": t.slug, "count": t.count, "url": url})
+                        })
+                        .collect(),
+                ));
+            }
+            self.load_data_file(name)
         })
     }
 
@@ -473,6 +914,47 @@ impl DataSource for Site {
 }
 
 // ------------------------------------------------------------------ helpers
+
+/// Front matter keys for a taxonomy name: `tag` → [tags, tag].
+fn taxonomy_keys(name: &str) -> Vec<String> {
+    let mut v = vec![name.to_string()];
+    if let Some(stem) = name.strip_suffix("ies") {
+        v.push(format!("{stem}y"));
+    } else if let Some(stem) = name.strip_suffix('y') {
+        v.insert(0, format!("{stem}ies"));
+    } else if let Some(stem) = name.strip_suffix('s') {
+        v.push(stem.to_string());
+    } else {
+        v.insert(0, format!("{name}s"));
+    }
+    v
+}
+
+/// URL of page `n` of a paginated route: `/blog/` → `/blog/page/2/`.
+pub fn page_url(base: &str, n: usize) -> String {
+    if n <= 1 {
+        base.to_string()
+    } else {
+        format!("{}/page/{n}/", base.trim_end_matches('/'))
+    }
+}
+
+fn pagination_value(url: &str, page: usize, total: usize) -> Value {
+    let pages: Vec<Value> = (1..=total)
+        .map(|n| json!({"number": n, "url": page_url(url, n), "current": n == page}))
+        .collect();
+    json!({
+        "current": page,
+        "total": total,
+        "has_prev": page > 1,
+        "has_next": page < total,
+        "prev_url": if page > 1 { page_url(url, page - 1) } else { String::new() },
+        "next_url": if page < total { page_url(url, page + 1) } else { String::new() },
+        "first_url": page_url(url, 1),
+        "last_url": page_url(url, total),
+        "pages": pages,
+    })
+}
 
 pub fn detect_tailwind(root: &Path) -> Tailwind {
     match std::fs::read_to_string(root.join("assets/css/main.css")) {
@@ -525,7 +1007,7 @@ pub fn parse_urls(html: &str, base: &str) -> String {
     .into_owned()
 }
 
-fn to_url_path(p: &Path) -> String {
+pub fn to_url_path(p: &Path) -> String {
     p.components()
         .filter_map(|c| match c {
             Component::Normal(s) => Some(s.to_string_lossy().to_string()),
@@ -608,7 +1090,7 @@ fn attr_escape(s: &str) -> String {
 }
 
 /// JSON that is safe inside a `<script>` element.
-fn script_json(v: &Value) -> String {
+pub fn script_json(v: &Value) -> String {
     v.to_string()
         .replace("</", "<\\/")
         .replace("<!--", "<\\!--")
@@ -645,6 +1127,16 @@ mod tests {
             route_for("blog/post"),
             ("/blog/post/".into(), PathBuf::from("blog/post/index.html"))
         );
+    }
+
+    #[test]
+    fn pages_and_taxonomy_keys() {
+        assert_eq!(page_url("/blog/", 1), "/blog/");
+        assert_eq!(page_url("/blog/", 3), "/blog/page/3/");
+        assert_eq!(page_url("/", 2), "/page/2/");
+        assert_eq!(taxonomy_keys("tag"), vec!["tags", "tag"]);
+        assert_eq!(taxonomy_keys("category"), vec!["categories", "category"]);
+        assert_eq!(taxonomy_keys("tags"), vec!["tags", "tag"]);
     }
 
     #[test]

@@ -1,0 +1,4 @@
+<layout title="Tagged {tag}" src="base.html">
+<h1>{tag} ({term.count})</h1>
+<ForEach content="blog" as="post" where="post.tags contains tag"><a href="{post.url}">{post.title}</a></ForEach>
+</layout>

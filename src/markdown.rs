@@ -69,6 +69,7 @@ pub fn slugify(text: &str) -> String {
         .collect()
 }
 
+#[derive(Clone)]
 pub struct Rendered {
     pub html: String,
     /// `[{content, slug, lvl}]`, compatible with markdown-toc's JSON.
@@ -90,7 +91,40 @@ fn level_num(l: HeadingLevel) -> usize {
 
 /// Render markdown; headings get GitHub-style `id`s and a `[toc]` marker
 /// (on its own line) becomes a nested list of links.
+/// Render with the default code theme.
 pub fn render(markdown: &str) -> Rendered {
+    render_with(markdown, Some(DEFAULT_THEME))
+}
+
+pub const DEFAULT_THEME: &str = "base16-ocean.dark";
+
+static SYNTAXES: std::sync::LazyLock<syntect::parsing::SyntaxSet> =
+    std::sync::LazyLock::new(syntect::parsing::SyntaxSet::load_defaults_newlines);
+static THEMES: std::sync::LazyLock<syntect::highlighting::ThemeSet> =
+    std::sync::LazyLock::new(syntect::highlighting::ThemeSet::load_defaults);
+
+/// Names of the built-in code highlighting themes.
+pub fn theme_names() -> Vec<String> {
+    THEMES.themes.keys().cloned().collect()
+}
+
+fn highlight(code: &str, lang: &str, theme: &str) -> Option<String> {
+    let lang = lang.split([' ', ',', '{']).next().unwrap_or_default();
+    let syntax = SYNTAXES.find_syntax_by_token(lang).or_else(|| match lang {
+        "html" | "vue" | "svelte" => SYNTAXES.find_syntax_by_extension("html"),
+        "ts" | "typescript" | "tsx" | "jsx" => SYNTAXES.find_syntax_by_extension("js"),
+        "sh" | "shell" | "zsh" | "console" => SYNTAXES.find_syntax_by_extension("sh"),
+        "toml" => SYNTAXES.find_syntax_by_extension("yaml"),
+        _ => None,
+    })?;
+    let theme = THEMES.themes.get(theme)?;
+    let html = syntect::html::highlighted_html_for_string(code, &SYNTAXES, syntax, theme).ok()?;
+    // Keep the language class so CSS/JS can still target it.
+    Some(html.replacen("<pre ", &format!("<pre data-lang=\"{}\" ", esc(lang)), 1))
+}
+
+/// Render markdown; `theme` = `None` disables syntax highlighting.
+pub fn render_with(markdown: &str, theme: Option<&str>) -> Rendered {
     let mut events: Vec<Event> = Parser::new_ext(markdown, options()).collect();
 
     // Pass 1: compute heading slugs.
@@ -132,8 +166,44 @@ pub fn render(markdown: &str) -> Rendered {
         i += 1;
     }
 
+    // Pass 2: fenced code → highlighted HTML; ```mermaid → <pre class="mermaid">.
+    let mut out_events: Vec<Event> = Vec::with_capacity(events.len());
+    let mut iter = events.into_iter();
+    while let Some(ev) = iter.next() {
+        if let Event::Start(Tag::CodeBlock(pulldown_cmark::CodeBlockKind::Fenced(lang))) = &ev {
+            let lang = lang.to_string();
+            let mut code = String::new();
+            let mut rest = Vec::new();
+            for e in iter.by_ref() {
+                match e {
+                    Event::End(TagEnd::CodeBlock) => break,
+                    Event::Text(t) => code.push_str(&t),
+                    other => rest.push(other),
+                }
+            }
+            let replaced = if lang == "mermaid" {
+                Some(format!("<pre class=\"mermaid\">{}</pre>\n", esc(&code)))
+            } else if lang.is_empty() {
+                None
+            } else {
+                theme.and_then(|t| highlight(&code, &lang, t))
+            };
+            match replaced {
+                Some(h) => out_events.push(Event::Html(CowStr::from(h))),
+                None => {
+                    out_events.push(ev);
+                    out_events.push(Event::Text(CowStr::from(code)));
+                    out_events.extend(rest);
+                    out_events.push(Event::End(TagEnd::CodeBlock));
+                }
+            }
+            continue;
+        }
+        out_events.push(ev);
+    }
+
     let mut body = String::new();
-    html::push_html(&mut body, events.into_iter());
+    html::push_html(&mut body, out_events.into_iter());
 
     if body.contains("[toc]") {
         let list = toc_html(&toc);
@@ -210,6 +280,22 @@ mod tests {
         assert_eq!(d.body, "# Body");
         assert!(parse_front_matter("---\n: [\n---\n", "x").is_err());
         assert_eq!(parse_front_matter("no fm", "x").unwrap().body, "no fm");
+    }
+
+    #[test]
+    fn code_highlighting() {
+        let r = render(
+            "```rust\nfn main() {}\n```\n\n```mermaid\ngraph TD; A-->B\n```\n\n```\nplain\n```",
+        );
+        assert!(
+            r.html.contains("<pre data-lang=\"rust\" style="),
+            "{}",
+            r.html
+        );
+        assert!(r.html.contains("<pre class=\"mermaid\">graph TD; A--&gt;B"));
+        assert!(r.html.contains("<pre><code>plain"));
+        let plain = render_with("```rust\nfn x(){}\n```", None);
+        assert!(plain.html.contains("<code class=\"language-rust\">"));
     }
 
     #[test]

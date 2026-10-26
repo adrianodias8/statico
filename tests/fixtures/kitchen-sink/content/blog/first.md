@@ -2,6 +2,8 @@
 title: First post
 date: 2024-01-10
 featured: true
+tags: [Rust, web]
+description: The very first post
 ---
 
 [toc]

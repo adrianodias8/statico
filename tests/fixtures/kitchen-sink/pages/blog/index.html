@@ -1,3 +1,4 @@
 <layout title="Blog" src="base.html">
-<ForEach content="blog" as="post"><h2>{post.title}</h2>{post.html}</ForEach>
+<ForEach content="blog" as="post" orderBy="date, desc" paginate="1"><h2>{post.title}</h2>{post.html}</ForEach>
+<p class="pager">Page {pagination.current} of {pagination.total}<If condition="pagination.has_next"> <a href="{pagination.next_url}">Older</a></If><If condition="pagination.has_prev"> <a href="{pagination.prev_url}">Newer</a></If></p>
 </layout>

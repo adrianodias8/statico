@@ -1,8 +1,8 @@
 //! Asset pipeline: copy `public/` and `assets/`, compile Tailwind, bundle JS.
 //!
-//! Static itself is a single binary with no Node.js requirement. Tailwind and
+//! Forno itself is a single binary with no Node.js requirement. Tailwind and
 //! esbuild are external tools; we look for them in this order:
-//!   1. an explicit override (`STATIC_TAILWIND` / `STATIC_ESBUILD` env vars),
+//!   1. an explicit override (`FORNO_TAILWIND` / `FORNO_ESBUILD` env vars),
 //!   2. the project's `node_modules/.bin`,
 //!   3. a standalone binary on `PATH`,
 //!   4. `npx --yes <package>`.
@@ -91,7 +91,7 @@ fn package_major(root: &Path, pkg: &str) -> Option<u64> {
 }
 
 pub fn find_tailwind(root: &Path, kind: Tailwind) -> Option<Tool> {
-    if let Some(t) = from_env("STATIC_TAILWIND") {
+    if let Some(t) = from_env("FORNO_TAILWIND") {
         return Some(t);
     }
     match kind {
@@ -102,7 +102,10 @@ pub fn find_tailwind(root: &Path, kind: Tailwind) -> Option<Tool> {
             {
                 return Some(Tool::new(p, &[], "node_modules/.bin/tailwindcss (v3)"));
             }
-            npx().map(|p| Tool::new(p, &["--yes", "tailwindcss@3"], "npx tailwindcss@3"))
+            if let Some(p) = crate::tools::tailwind(3) {
+                return Some(Tool::new(p, &[], "tailwindcss standalone v3"));
+            }
+            npx_tailwind(kind)
         }
         Tailwind::V4 => {
             if root.join("node_modules/@tailwindcss/cli").is_dir()
@@ -111,21 +114,34 @@ pub fn find_tailwind(root: &Path, kind: Tailwind) -> Option<Tool> {
                 return Some(Tool::new(p, &[], "node_modules/.bin/tailwindcss (v4)"));
             }
             if let Some(p) = which("tailwindcss") {
-                return Some(Tool::new(p, &[], "tailwindcss (standalone)"));
+                return Some(Tool::new(p, &[], "tailwindcss (PATH)"));
             }
-            npx().map(|p| {
-                Tool::new(
-                    p,
-                    &["--yes", "@tailwindcss/cli@4"],
-                    "npx @tailwindcss/cli@4",
-                )
-            })
+            if let Some(p) = crate::tools::tailwind(4) {
+                return Some(Tool::new(p, &[], "tailwindcss standalone v4"));
+            }
+            npx_tailwind(kind)
         }
     }
 }
 
+fn npx_tailwind(kind: Tailwind) -> Option<Tool> {
+    match kind {
+        Tailwind::V3 => {
+            npx().map(|p| Tool::new(p, &["--yes", "tailwindcss@3"], "npx tailwindcss@3"))
+        }
+        Tailwind::V4 => npx().map(|p| {
+            Tool::new(
+                p,
+                &["--yes", "@tailwindcss/cli@4"],
+                "npx @tailwindcss/cli@4",
+            )
+        }),
+        Tailwind::None => None,
+    }
+}
+
 pub fn find_esbuild(root: &Path) -> Option<Tool> {
-    if let Some(t) = from_env("STATIC_ESBUILD") {
+    if let Some(t) = from_env("FORNO_ESBUILD") {
         return Some(t);
     }
     if let Some(p) = local_bin(root, "esbuild") {
@@ -133,6 +149,9 @@ pub fn find_esbuild(root: &Path) -> Option<Tool> {
     }
     if let Some(p) = which("esbuild") {
         return Some(Tool::new(p, &[], "esbuild"));
+    }
+    if let Some(p) = crate::tools::esbuild() {
+        return Some(Tool::new(p, &[], "esbuild (managed)"));
     }
     npx().map(|p| Tool::new(p, &["--yes", "esbuild"], "npx esbuild"))
 }
@@ -164,8 +183,8 @@ pub fn build_css(site: &Site, out_dir: &Path) -> Result<bool> {
         return Ok(false);
     }
     let Some(tool) = find_tailwind(&site.root, site.tailwind) else {
-        eprintln!(
-            "warning: no Tailwind compiler found (install Node.js, or put the standalone `tailwindcss` binary on PATH).\n         Pages will use the in-browser Tailwind build instead."
+        crate::diag::warn(
+            "no Tailwind compiler available (offline, or unsupported platform); pages use the in-browser Tailwind build instead. Put `tailwindcss` on PATH or set FORNO_TAILWIND.",
         );
         return Ok(false);
     };
@@ -182,7 +201,29 @@ pub fn build_css(site: &Site, out_dir: &Path) -> Result<bool> {
         args.push("-c".into());
         args.push(site.root.join("tailwind.config.js").display().to_string());
     }
-    run(&tool, &site.root, &args).context("compiling Tailwind CSS")?;
+    if tool.label.starts_with("npx") {
+        ensure_node_modules(&site.root)?;
+    }
+    if let Err(e) = run(&tool, &site.root, &args) {
+        // The standalone CLI only bundles first-party plugins; retry via npm
+        // for configs that `require()` third-party ones.
+        let retry = tool
+            .label
+            .contains("standalone")
+            .then(|| npx_tailwind(site.tailwind))
+            .flatten();
+        match retry {
+            Some(npx_tool) => {
+                crate::diag::warn(format!(
+                    "{} failed, retrying with {}",
+                    tool.label, npx_tool.label
+                ));
+                ensure_node_modules(&site.root)?;
+                run(&npx_tool, &site.root, &args).context("compiling Tailwind CSS")?;
+            }
+            None => return Err(e.context("compiling Tailwind CSS")),
+        }
+    }
     Ok(true)
 }
 
@@ -193,7 +234,7 @@ pub fn build_js(site: &Site, out_dir: &Path) -> Result<()> {
         return Ok(());
     }
     let Some(tool) = find_esbuild(&site.root) else {
-        eprintln!("warning: esbuild not found; assets/js/main.js was copied without bundling.");
+        crate::diag::warn("esbuild not available; assets/js/main.js was copied without bundling.");
         return Ok(());
     };
     let output = out_dir.join("assets/js/main.js");
@@ -251,7 +292,7 @@ pub fn ensure_node_modules(root: &Path) -> Result<()> {
     if detect_requires(root)
         && let Some(npm) = which("npm")
     {
-        eprintln!("Installing npm dependencies (tailwind.config.js requires plugins)…");
+        crate::say!("Installing npm dependencies (tailwind.config.js requires plugins)…");
         let status = Command::new(npm)
             .arg("install")
             .arg("--no-fund")

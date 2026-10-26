@@ -1,6 +1,6 @@
 [package]
-name = "static-rs"
-description = "A fast, single-binary static site generator compatible with DevDojo Static"
+name = "forno-cli"
+description = "Forno — bake plain HTML into fast static sites. A single-binary static site generator."
 license = "ISC"
 version = "0.1.0"
 edition = "2024"
@@ -24,6 +24,13 @@ ureq = { version = "3", features = ["platform-verifier"] }
 zip = { version = "4", default-features = false, features = ["deflate"] }
 open = "5"
 mime_guess = "2"
+syntect = { version = "5", default-features = false, features = ["default-fancy"] }
+toml = "0.9"
+csv = "1"
+imagesize = "0.14"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+flate2 = "1"
+tar = "0.4"
 
 [dev-dependencies]
 tempfile = "3"
@@ -33,6 +40,10 @@ lto = true
 codegen-units = 1
 strip = true
 
+[lib]
+name = "forno"
+path = "src/lib.rs"
+
 [[bin]]
-name = "static"
+name = "forno"
 path = "src/main.rs"

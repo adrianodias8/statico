@@ -7,8 +7,10 @@
 </ul>
 <h2>Latest posts</h2>
 <ForEach content="blog" as="post" orderBy="date, desc" count="2">
-  <article><a href="{post.link}">{post.title}</a> <If condition="post.featured">★<Else>·</If></article>
+  <article><a href="{post.link}">{post.title}</a> <If condition="post.featured">★<Else>·</If> <time>{post.date|date:"%b %Y"}</time> {post.title|upper} {post.subtitle|default:"none"}</article>
 </ForEach>
 <include src="card.html" heading="Card" label="New" />
+<ul class="prices"><ForEach collection="prices" as="p"><li>{p.plan}: {p.price}</li></ForEach></ul>
+<ul class="tags"><ForEach collection="taxonomy/tags" as="t"><li><a href="{t.url}">{t.name} ({t.count})</a></li></ForEach></ul>
 <script>const menu = {collections.menu.json}; const obj = {open: true}; if (x) {y}</script>
 </layout>

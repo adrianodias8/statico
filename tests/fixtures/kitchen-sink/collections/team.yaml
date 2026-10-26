@@ -1,0 +1,9 @@
+- name: Ada
+  age: 36
+  skills: [math, engines]
+- name: Linus
+  age: 28
+  skills: [kernels]
+- name: Grace
+  age: 45
+  skills: []

@@ -1,163 +1,140 @@
-# ⚡ Static (Rust)
+# 🔥 Forno
 
-A fast, single-binary static site generator — a Rust rewrite of
-[DevDojo's Static](https://github.com/thedevdojo/static). Your existing Static
-projects build unchanged; pages, layouts, includes, collections and markdown
-content work exactly as before, with the original's bugs fixed and a few
-well-earned extras. See [PLAN.md](PLAN.md) for the audit and design notes.
+**Bake plain HTML into fast static sites.** One binary. No framework, no Node,
+no template language to learn — just HTML files and a handful of tags.
 
-- **One binary.** No Node.js needed to render your site.
-- **~10× faster builds**, parallel page rendering, sub-millisecond dev renders.
-- **Tailwind that actually works**: v3 (`@tailwind base;` + `tailwind.config.js`, used by every official template) and v4 (`@import "tailwindcss";`) are detected automatically.
-- **Real errors**: `pages/blog/index.html:12: <ForEach> is never closed`, shown in the terminal *and* in the browser.
+```sh
+forno new my-site        # or: mkdir my-site && cd my-site && forno init
+cd my-site
+forno dev                # http://localhost:3000, live reload
+forno build https://my-site.com
+```
+
+Forno started as a Rust rewrite of [DevDojo's Static](https://github.com/thedevdojo/static)
+and still builds Static projects unchanged (`static.json` works as-is).
+
+## Why Forno
+
+- **Plain HTML.** Pages are HTML files; layouts and includes are HTML files. Five tags: `<layout>`, `<include>`, `<ForEach>`, `<If>`, `<page>`.
+- **One binary, no Node.** Tailwind (v3 and v4, auto-detected) and esbuild are fetched as standalone binaries on first use and cached.
+- **Batteries included.** Markdown with syntax highlighting, pagination, tag pages, Atom feeds, SEO and Open Graph tags, sitemap, search index, image dimensions and lazy loading, minification, fingerprinted assets.
+- **Errors that tell you where.** `pages/blog/index.html:12: <ForEach> is never closed [F001]` — in the terminal, in the browser, and as JSON.
+- **Built for AI agents too.** `--json` on every command, `forno check` as a definition of done, `forno add` scaffolding, an `AGENTS.md` generator, `llms.txt` and markdown copies of every post.
+- **Fast.** Pages render in parallel; a 1,000-post blog with syntax highlighting builds in ~1.5 s on a 2-core VM.
 
 ## Install
 
 ```sh
-cargo install --path .          # from this folder
-# the binary is called `static`
+cargo install forno-cli        # binary: forno
 ```
 
-## Commands
+Prebuilt binaries, a `curl | sh` installer, an npm wrapper and a Homebrew
+formula are set up in [`packaging/`](packaging/) and publish with each tagged release.
 
-```sh
-static new my-site                 # starter template
-static new my-blog --blog          # or --template blog | owner/repo | ./folder | file.zip
-static dev                         # http://localhost:3000, live reload
-static dev --port 8080 --open
-static build                       # → _site/
-static build https://example.com   # absolute URLs + sitemap.xml
-static serve                       # preview _site/ like a static host
-static templates                   # list official templates
-```
-
-Use `-C <dir>` to run against another folder.
-
-## Project layout
+## A site in two minutes
 
 ```
-pages/        routes: pages/about.html → /about/,  pages/blog/index.html → /blog/
-layouts/      <layout src="main.html" title="…"> … </layout>  →  {slot}, {title}
-includes/     <include src="nav.html" active="home"></include>  →  {active}
-collections/  menu.json → <ForEach collection="menu">{menu.title}</ForEach>
-content/      markdown: content/blog/hello.md → /blog/hello/ via pages/blog/[content].html
-assets/       css/main.css (Tailwind), js/main.js (bundled with esbuild), images/…
-public/       copied to the site root as-is (favicon.ico, robots.txt, CNAME…)
-static.json   optional config
-.env          optional, exposed as {env.KEY}
+pages/index.html              →  /
+pages/about.html              →  /about/
+pages/blog/index.html         →  /blog/  (+ /blog/page/2/ …)
+pages/blog/[content].html     →  template for content/blog/*.md
+pages/tags/[tag].html         →  /tags/<tag>/ for every tag
+content/blog/hello.md         →  /blog/hello/
+layouts/main.html             →  page shell with {slot}
+includes/header.html          →  <include src="header.html" />
+collections/team.yaml         →  <ForEach collection="team">
+assets/css/main.css           →  Tailwind, compiled and fingerprinted
+public/                       →  copied as-is
 ```
-
-## Templates
-
-### Layouts and includes
 
 ```html
-<layout title="About" src="main.html">
-    <include src="header.html" title="About us" />
-    <p>Hello</p>
+<!-- pages/blog/index.html -->
+<layout src="main.html" title="Blog">
+  <ForEach content="blog" as="post" orderBy="date, desc" paginate="10">
+    <article>
+      <a href="{post.url}">{post.title}</a>
+      <time>{post.date|date:"%B %-d, %Y"}</time>
+      <If condition="post.tags contains 'news'"><span>News</span></If>
+    </article>
+  </ForEach>
+  <If condition="pagination.has_next"><a href="{pagination.next_url}">Older posts</a></If>
 </layout>
 ```
 
-A layout file can itself start with `<layout src="base.html">` to nest layouts.
-Includes can contain includes. `{tailwindcss}` in a layout's `<head>` becomes the
-compiled stylesheet in `build` and the in-browser compiler in `dev`.
-
-### Loops
-
 ```html
-<ForEach collection="menu" as="item">
-    <a href="{item.link}">{item.title}</a>
-</ForEach>
-
-<ForEach content="posts" as="post" orderBy="date, desc" count="3" where="!post.hidden">
-    <If condition="loop == 1"><h2>Latest</h2></If>
-    <a href="{post.link}">{post.title}</a>
-    <ForEach collection="post.tags" as="tag"><span>{tag}</span></ForEach>
-</ForEach>
+<!-- layouts/main.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>{title} · {site.name}</title>
+  {seo}
+  {tailwindcss}
+</head>
+<body>{slot}</body>
+</html>
 ```
 
-Attributes: `collection` / `content`, `as`, `orderBy="key[, desc]"`, `count`,
-`offset`, `where`. Inside a loop: `{loop}` (1-based) and `{$loop.index}`,
-`{$loop.first}`, `{$loop.last}`, `{$loop.count}`. Content items expose their
-front matter plus `link`, `slug`, `content` (markdown) and `html` (rendered).
+The full reference ships in the binary: `forno docs`, `forno docs loops`,
+`forno docs --all`, or read [docs/REFERENCE.md](docs/REFERENCE.md).
 
-`{collections.menu.json}` inlines a collection as JSON (handy for Alpine.js).
+## Commands
 
-### Conditions
-
-```html
-<If condition="frontmatter.featured && post.tags contains 'rust'">…
-<ElseIf condition="loop > 1">…
-<Else>…
-</If>
-```
-
-Supports `== != === !== < <= > >=`, `&& || !` (or `and or not`), `contains`,
-`.length`, parentheses, strings, numbers and `{placeholder}` syntax. Conditions
-are evaluated by a small safe interpreter — never as JavaScript.
-
-### Markdown content
-
-```markdown
----
-title: Hello
-date: 2024-05-01
-draft: true      # shown in `dev`, skipped in `build`
----
-[toc]
-
-## Section
-```
-
-The page template (`pages/blog/[content].html`) gets `{content}`,
-`{frontmatter.*}`, `{static_content_element}`, and the
-`window.toc` / `window.frontmatter` globals.
-
-### Other placeholders
-
-| Placeholder | Value |
+| Command | |
 |---|---|
-| `{ url('/path') }` | `/path`, or `https://example.com/path` when building with a URL |
-| `{page.url}` | current URL, e.g. `/blog/` — useful for active nav links |
-| `{site.name}` | anything under `"site"` in static.json |
-| `{env.KEY}` | from `.env` only (your shell environment is never exposed) |
+| `forno new <dir> [--template blog\|owner/repo\|./dir]` | new site from a template |
+| `forno init` | turn the current folder into a site |
+| `forno dev [--port] [--open]` | dev server, live reload, error overlay |
+| `forno build [url] [--watch]` | production build into `_site/` |
+| `forno serve` | preview the build like a static host |
+| `forno check [--strict]` | broken links and anchors, alt text, titles, unresolved placeholders |
+| `forno add page\|post\|include\|layout\|collection` | scaffold files |
+| `forno routes` | every URL → source file |
+| `forno docs [topic]` · `forno explain F101` | offline reference and error codes |
+| `forno diff <old> <new>` | compare two builds (verify upgrades change nothing) |
+| `forno agents` | write `AGENTS.md` + `CLAUDE.md` for coding agents |
+| `forno schema` | JSON Schema for `forno.json` |
 
-## static.json
+Every command accepts `--json` and `-C <dir>`. Exit code `1` means errors.
 
-```json
-{
-  "site": { "name": "My Site" },
-  "build": { "url": "https://example.com", "directory": "_site", "sitemap": true },
-  "dev": { "port": 3000 },
-  "headers": { "X-Frame-Options": "DENY" }
-}
-```
+## Using Forno with AI coding agents
 
-## Tailwind and JavaScript
+Agents work best with a terminal, plain files and fast feedback. Forno gives them:
 
-Rendering never needs Node. For CSS and JS, `static build` looks for, in order:
-`STATIC_TAILWIND` / `STATIC_ESBUILD` env overrides → `node_modules/.bin` → a
-standalone binary on `PATH` → `npx`. If nothing is available the build still
-succeeds (JS copied as-is, CSS via the in-browser compiler) and tells you so.
-`--skip-tools` skips them explicitly.
+1. **`AGENTS.md`** (from `forno new`, `forno init` or `forno agents`) — the project's conventions in one page.
+2. **`forno check --json`** — structured errors with `code`, `file`, `url` and `message`; zero errors means done.
+3. **`forno add …`** — files created in the right place with working boilerplate.
+4. **`forno docs --all` / `forno explain`** — documentation that matches the installed version.
+5. **Readable output for other AIs** — `llms.txt`, `llms-full.txt`, `/post.md` copies, and the dev server answers `Accept: text/markdown`.
 
-## Deploying (GitHub Pages)
+There is no MCP server on purpose: agents that can run shell commands get
+everything through the CLI, with fewer tokens. See [docs/RESEARCH.md](docs/RESEARCH.md).
 
-```yaml
-- run: cargo install --git https://github.com/<you>/static-rs
-- run: static build https://<you>.github.io
-- uses: actions/upload-pages-artifact@v3
-  with: { path: ./_site }
-```
+## Coming from Static
+
+Everything keeps working: `static.json`, `<layout>`, `<include>`, `<ForEach>`,
+`<If>`, `{tailwindcss}`, `{ url() }`, `[content].html`, `window.toc`,
+`{static_content_element}`, and `forno new my-site --blog`. Differences you'll
+notice are fixes:
+
+- Tailwind v3 projects (all official templates) now compile correctly.
+- `<If>` conditions are evaluated safely instead of as JavaScript.
+- `pages/404.html` builds to `/404.html`.
+- Builds fail loudly, with every error listed, instead of half-succeeding.
+
+## Project docs
+
+- [docs/REFERENCE.md](docs/REFERENCE.md) — complete syntax and configuration
+- [ROADMAP.md](ROADMAP.md) — what's done, what's next, and why
+- [docs/RESEARCH.md](docs/RESEARCH.md) — what users of other generators are missing
+- [packaging/README.md](packaging/README.md) — releases and distribution
 
 ## Development
 
 ```sh
-cargo test                # unit + end-to-end fixture tests
-cargo clippy --all-targets
+cargo test                       # unit tests + end-to-end fixture
+cargo clippy --all-targets -- -D warnings
 ```
 
 ## License
 
-ISC, like the original. Static was created by [Tony Lea](https://github.com/tnylea) / DevDojo;
-the built-in 404 page is theirs.
+ISC. Forno began as a rewrite of Static by [Tony Lea](https://github.com/tnylea) / DevDojo.

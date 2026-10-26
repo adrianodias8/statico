@@ -6,6 +6,7 @@
 
 pub mod compose;
 pub mod expr;
+pub mod filters;
 pub mod tags;
 
 use anyhow::{Context as _, Result, bail};
@@ -174,6 +175,12 @@ pub struct Scope<'a> {
     bare: Vec<Value>,
     data: &'a dyn DataSource,
     origin: String,
+    /// `relative` or the absolute base URL (for the `abs_url` filter).
+    pub base_url: String,
+    /// Which page of a `<ForEach paginate="N">` to render (1-based).
+    pub page_number: usize,
+    /// Set by the first paginated `<ForEach>`: (items per page, total items).
+    pub paginated: Option<(usize, usize)>,
 }
 
 impl<'a> Scope<'a> {
@@ -183,6 +190,9 @@ impl<'a> Scope<'a> {
             bare: Vec::new(),
             data,
             origin: origin.into(),
+            base_url: "relative".into(),
+            page_number: 1,
+            paginated: None,
         }
     }
 
@@ -266,8 +276,15 @@ pub fn value_to_string(v: &Value) -> String {
     }
 }
 
-static PLACEHOLDER: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\{([A-Za-z_$][\w$-]*(?:\.[\w$-]+)*)\}").unwrap());
+static PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"\{([A-Za-z_$][\w$-]*(?:\.[\w$-]+)*)((?:\s*\|\s*[a-z_]+(?::(?:"[^"]*"|'[^']*'|[^|}\s]+))?)*)\s*\}"#,
+    )
+    .unwrap()
+});
+static FILTER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"\|\s*([a-z_]+)(?::(?:"([^"]*)"|'([^']*)'|([^|}\s]+)))?"#).unwrap()
+});
 
 /// Replace `{a.b}` placeholders whose root is a known variable. Unknown
 /// placeholders (e.g. inline JS like `{open}`) are left untouched.
@@ -276,9 +293,29 @@ pub fn substitute(text: &str, scope: &Scope) -> String {
         return text.to_string();
     }
     PLACEHOLDER
-        .replace_all(text, |c: &regex::Captures| match scope.lookup(&c[1]) {
-            Some(v) => value_to_string(&v),
-            None => c[0].to_string(),
+        .replace_all(text, |c: &regex::Captures| {
+            let mut v = match scope.lookup(&c[1]) {
+                Some(v) => v,
+                // `{post.subtitle|default:"—"}`: a missing field of a known
+                // variable is null when filters follow, so `default` works.
+                None if !c[2].trim().is_empty()
+                    && c[1]
+                        .split_once('.')
+                        .is_some_and(|(root, _)| scope.lookup(root).is_some()) =>
+                {
+                    Value::Null
+                }
+                None => return c[0].to_string(),
+            };
+            for f in FILTER.captures_iter(&c[2]) {
+                let arg = f.get(2).or(f.get(3)).or(f.get(4)).map(|m| m.as_str());
+                match filters::apply(&f[1], arg, v, &scope.base_url) {
+                    Some(nv) => v = nv,
+                    // Unknown filter: leave the placeholder as written.
+                    None => return c[0].to_string(),
+                }
+            }
+            value_to_string(&v)
         })
         .into_owned()
 }
@@ -399,11 +436,20 @@ fn render_foreach(
         .unwrap_or(0);
     let count = attr(attrs, "count").and_then(|s| s.trim().parse::<usize>().ok());
     let total = items.len();
-    let selected: Vec<Value> = items
+    let mut selected: Vec<Value> = items
         .into_iter()
         .skip(offset)
         .take(count.unwrap_or(usize::MAX))
         .collect();
+    // `paginate="10"`: the page renders one slice; the build emits /page/2/ etc.
+    if let Some(per) = attr(attrs, "paginate").and_then(|s| s.trim().parse::<usize>().ok()) {
+        let per = per.max(1);
+        if scope.paginated.is_none() {
+            scope.paginated = Some((per, selected.len()));
+        }
+        let start = (scope.page_number.saturating_sub(1)) * per;
+        selected = selected.into_iter().skip(start).take(per).collect();
+    }
     let n = selected.len();
 
     for (i, item) in selected.into_iter().enumerate() {
@@ -538,6 +584,27 @@ mod tests {
     fn where_offset_loop_meta() {
         let s = r#"<ForEach collection="nums" as="x" where="x.n >= 2" offset="1">{x.n}{$loop.last}</ForEach>"#;
         assert_eq!(run(s), "2true");
+    }
+
+    #[test]
+    fn filters_and_pagination() {
+        assert_eq!(
+            run(
+                r#"{frontmatter.title|lower} {frontmatter.title | default:"x"} {frontmatter.title|bogus}"#
+            ),
+            "t T {frontmatter.title|bogus}"
+        );
+        let nodes = parse(
+            r#"<ForEach collection="nums" as="x" paginate="2">{x.n}</ForEach>"#,
+            "t",
+        )
+        .unwrap();
+        let mut scope = Scope::new(&Data, "t");
+        scope.page_number = 2;
+        let mut out = String::new();
+        render(&nodes, &mut scope, &mut out).unwrap();
+        assert_eq!(out, "2");
+        assert_eq!(scope.paginated, Some((2, 3)));
     }
 
     #[test]

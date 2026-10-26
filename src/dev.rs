@@ -1,4 +1,4 @@
-//! `static dev` and `static serve`.
+//! `forno dev` and `forno serve`.
 //!
 //! The dev server renders pages on request, watches the project and reloads
 //! the browser over Server-Sent Events (no second live-reload port, no
@@ -29,8 +29,8 @@ use tokio_stream::{Stream, StreamExt, wrappers::BroadcastStream};
 use crate::assets;
 use crate::site::{Mode, Site, insert_before, sanitize_url_path};
 
-const LIVERELOAD_PATH: &str = "/__static/livereload";
-const LIVERELOAD_SCRIPT: &str = r#"<script>(()=>{let down=false;const es=new EventSource('/__static/livereload');es.onmessage=e=>{if(e.data==='reload')location.reload()};es.onerror=()=>{down=true};es.onopen=()=>{if(down)location.reload()}})()</script>"#;
+const LIVERELOAD_PATH: &str = "/__forno/livereload";
+const LIVERELOAD_SCRIPT: &str = r#"<script>(()=>{let down=false;const es=new EventSource('/__forno/livereload');es.onmessage=e=>{if(e.data==='reload')location.reload()};es.onerror=()=>{down=true};es.onopen=()=>{if(down)location.reload()}})()</script>"#;
 pub const DEFAULT_404: &str = include_str!("404.html");
 
 pub struct DevOptions {
@@ -77,10 +77,8 @@ pub fn dev(root: &Path, opts: DevOptions) -> Result<()> {
     let root = site.root.clone();
     let port = opts.port.or(site.config.dev.port).unwrap_or(3000);
 
-    let cache_dir = std::env::temp_dir().join(format!(
-        "static-dev-{:x}",
-        hash(&root.display().to_string())
-    ));
+    let cache_dir =
+        std::env::temp_dir().join(format!("forno-dev-{:x}", hash(&root.display().to_string())));
     let _ = std::fs::remove_dir_all(&cache_dir);
     std::fs::create_dir_all(cache_dir.join("assets/js"))?;
 
@@ -173,7 +171,7 @@ pub fn dev(root: &Path, opts: DevOptions) -> Result<()> {
     rt.block_on(async move {
         let (listener, port) = bind(&opts.host, port).await?;
         let url = format!("http://{}:{port}", if opts.host == "0.0.0.0" { "localhost" } else { &opts.host });
-        println!("\n  ⚡ Static dev server running at {url}\n     Watching for changes. Press Ctrl+C to stop.\n");
+        println!("\n  🔥 Forno dev server running at {url}\n     Watching for changes. Press Ctrl+C to stop.\n");
         if opts.open {
             let _ = open::that(&url);
         }
@@ -266,9 +264,18 @@ async fn livereload(
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
-async fn handle(State(st): State<Arc<DevState>>, uri: Uri) -> Response {
+async fn handle(
+    State(st): State<Arc<DevState>>,
+    uri: Uri,
+    headers: axum::http::HeaderMap,
+) -> Response {
     let path = uri.path().to_string();
-    let res = tokio::task::spawn_blocking(move || serve_path(&st, &path)).await;
+    // Agents can ask for markdown: `Accept: text/markdown`.
+    let wants_md = headers
+        .get(header::ACCEPT)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|a| a.contains("text/markdown"));
+    let res = tokio::task::spawn_blocking(move || serve_path(&st, &path, wants_md)).await;
     match res {
         Ok(r) => r,
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
@@ -333,10 +340,24 @@ fn add_headers(r: &mut Response, site: &Site) {
     }
 }
 
-fn serve_path(st: &DevState, path: &str) -> Response {
+fn serve_path(st: &DevState, path: &str, wants_md: bool) -> Response {
     let site = st.site();
 
-    // Static files: bundled JS, then assets/, then public/.
+    // Generated files: feeds.
+    for feed in crate::feeds::configs(&site) {
+        if feed.url == path {
+            return match crate::feeds::atom(&site, &feed) {
+                Ok(xml) => (
+                    [(header::CONTENT_TYPE, "application/atom+xml; charset=utf-8")],
+                    xml,
+                )
+                    .into_response(),
+                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response(),
+            };
+        }
+    }
+
+    // Plain files: bundled JS, then assets/, then public/.
     if let Some(sub) = path.strip_prefix("/assets/") {
         for base in [st.cache_dir.join("assets"), site.root.join("assets")] {
             if let Some(f) = safe_join(&base, sub).filter(|f| f.is_file())
@@ -354,35 +375,74 @@ fn serve_path(st: &DevState, path: &str) -> Response {
         return r;
     }
 
-    let Some(clean) = sanitize_url_path(path) else {
+    if sanitize_url_path(path).is_none() {
         return (StatusCode::BAD_REQUEST, "bad path").into_response();
-    };
-    // Same canonical form as the build: `/`, `/about/`, `/blog/post/`.
-    let canonical = if clean.is_empty() {
-        "/".to_string()
-    } else {
-        format!("/{clean}/")
+    }
+
+    // `/blog/post.md` → markdown source of /blog/post/ (like the build's mirrors).
+    let (lookup, md_request) = match path.strip_suffix(".md") {
+        Some(p) => (p.to_string(), true),
+        None => (path.to_string(), wants_md),
     };
 
-    if let Some(source) = site.resolve(path) {
+    if let Some((source, page)) = site.resolve(&lookup) {
         let started = std::time::Instant::now();
-        return match site.render(&source, &canonical) {
-            Ok(html) => {
-                println!("  200 {path} ({:.1?})", started.elapsed());
-                html_response(StatusCode::OK, html, &site)
-            }
-            Err(e) => {
-                let msg = format!("{e:#}");
-                eprintln!("  500 {path}\n  error: {msg}");
-                html_response(StatusCode::INTERNAL_SERVER_ERROR, error_page(&msg), &site)
-            }
+        let clean_lookup = sanitize_url_path(&lookup).unwrap_or_default();
+        let canonical = if clean_lookup.is_empty() {
+            "/".to_string()
+        } else {
+            format!("/{clean_lookup}/")
         };
+        let base = if page > 1 {
+            canonical
+                .trim_end_matches(&format!("page/{page}/"))
+                .to_string()
+        } else {
+            canonical
+        };
+        let result = site.render(&source, &base, page);
+        // `/blog/page/9/` past the last page is a 404, not an error.
+        let out_of_range = page > 1
+            && result
+                .as_ref()
+                .err()
+                .is_some_and(|e| e.to_string().contains("does not exist (only"));
+        if !out_of_range {
+            return match result {
+                Ok(r) if md_request => match r.markdown {
+                    Some(md) => (
+                        [(header::CONTENT_TYPE, "text/markdown; charset=utf-8")],
+                        format!("# {}\n\n{md}\n", r.title),
+                    )
+                        .into_response(),
+                    None => (
+                        [(header::CONTENT_TYPE, "text/markdown; charset=utf-8")],
+                        format!(
+                            "# {}\n\n{}\n",
+                            r.title,
+                            crate::postprocess::main_text(&r.html)
+                        ),
+                    )
+                        .into_response(),
+                },
+                Ok(r) => {
+                    println!("  200 {path} ({:.1?})", started.elapsed());
+                    html_response(StatusCode::OK, r.html, &site)
+                }
+                Err(e) => {
+                    let msg = format!("{e:#}");
+                    eprintln!("  500 {path}\n  error: {msg}");
+                    html_response(StatusCode::INTERNAL_SERVER_ERROR, error_page(&msg), &site)
+                }
+            };
+        }
     }
 
     // 404: the project's own pages/404.html, else the built-in page.
     let custom = site.root.join("pages/404.html");
     let html = if custom.is_file() {
-        site.render_page(&custom, path)
+        site.render(&crate::site::Source::Page(custom), "/404.html", 1)
+            .map(|r| r.html)
             .unwrap_or_else(|e| error_page(&format!("{e:#}")))
     } else {
         DEFAULT_404.to_string()
@@ -399,7 +459,7 @@ fn error_page(msg: &str) -> String {
         .replace('<', "&lt;")
         .replace('>', "&gt;");
     format!(
-        r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>Static · Build error</title>
+        r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>Forno · Build error</title>
 <style>body{{margin:0;font:15px/1.5 ui-sans-serif,system-ui,sans-serif;background:#0b0b0c;color:#e5e5e5}}
 main{{max-width:860px;margin:10vh auto;padding:0 24px}}h1{{font-size:18px;color:#f87171;margin:0 0 16px}}
 pre{{white-space:pre-wrap;background:#18181b;border:1px solid #3f3f46;border-radius:10px;padding:18px;font:13px/1.6 ui-monospace,monospace;color:#fafafa}}
@@ -408,14 +468,53 @@ p{{color:#a1a1aa;font-size:13px}}</style></head><body><main><h1>⚠ Couldn't ren
     )
 }
 
-/// `static serve`: preview a finished build exactly as a static host would.
+/// `forno build --watch`: rebuild into the output folder on every change.
+pub fn watch_build(root: &Path, opts: impl Fn() -> crate::build::BuildOptions) -> Result<()> {
+    let run = || match crate::build::build(root, opts()) {
+        Ok(r) => Some(r.out_dir),
+        Err(e) => {
+            eprintln!("error: {e:#}");
+            None
+        }
+    };
+    let mut out_dir = run().unwrap_or_else(|| root.join("_site"));
+    let root = root.canonicalize()?;
+    let (tx, rx) = std::sync::mpsc::channel::<PathBuf>();
+    let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
+        use notify::EventKind::*;
+        if let Ok(ev) = res
+            && matches!(ev.kind, Create(_) | Remove(_) | Modify(_))
+            && !matches!(ev.kind, Modify(notify::event::ModifyKind::Metadata(_)))
+        {
+            for p in ev.paths {
+                let _ = tx.send(p);
+            }
+        }
+    })?;
+    watcher.watch(&root, RecursiveMode::Recursive)?;
+    println!("  Watching for changes (Ctrl+C to stop)…");
+    let none = PathBuf::from("/nonexistent-forno-cache");
+    while let Ok(first) = rx.recv() {
+        let mut batch = vec![first];
+        while let Ok(p) = rx.recv_timeout(Duration::from_millis(100)) {
+            batch.push(p);
+        }
+        if batch.iter().any(|p| is_relevant(p, &root, &out_dir, &none)) {
+            if let Some(d) = run() {
+                out_dir = d;
+            }
+            // Drain events caused by our own writes.
+            while rx.recv_timeout(Duration::from_millis(50)).is_ok() {}
+        }
+    }
+    Ok(())
+}
+
+/// `forno serve`: preview a finished build exactly as a static host would.
 pub fn serve(dir: &Path, host: &str, port: u16, open_browser: bool) -> Result<()> {
     use tower_http::services::{ServeDir, ServeFile};
     if !dir.is_dir() {
-        anyhow::bail!(
-            "{} does not exist. Run `static build` first.",
-            dir.display()
-        );
+        anyhow::bail!("{} does not exist. Run `forno build` first.", dir.display());
     }
     let svc = ServeDir::new(dir).not_found_service(ServeFile::new(dir.join("404.html")));
     let rt = tokio::runtime::Builder::new_multi_thread()
