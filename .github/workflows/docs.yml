@@ -1,0 +1,42 @@
+name: Docs
+
+# Statico's documentation site, built by the Statico in this commit from the
+# built-in `docs` template, site/ and docs/REFERENCE.md, published to
+# https://adrianodias8.github.io/statico/
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**", "site/**", "templates/docs/**", "src/**", "build.rs", "Cargo.*", ".github/workflows/docs.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --release --locked
+      - name: Assemble the site
+        run: site/assemble.sh target/release/statico _docs
+      - name: Check
+        run: target/release/statico check -C _docs --strict
+      - name: Build
+        run: target/release/statico build https://adrianodias8.github.io/statico -C _docs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _docs/_site
+      - id: deployment
+        uses: actions/deploy-pages@v4

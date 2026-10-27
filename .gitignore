@@ -3,3 +3,4 @@ _site
 node_modules
 # Pending insta snapshots, written when a snapshot test fails
 *.snap.new
+_docs/

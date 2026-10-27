@@ -1,0 +1,12 @@
+{
+  "site": {
+    "name": "Statico",
+    "description": "Plain HTML in, fast static sites out. One binary: no framework, no Node, no template language to learn.",
+    "language": "en",
+    "repo": "https://github.com/adrianodias8/statico"
+  },
+  "build": { "search": true },
+  "markdown": { "highlight": "base16-eighties.dark" },
+  "feeds": false,
+  "schemas": { "docs": { "title": "string", "description": "string", "section": "string", "order": "number" } }
+}

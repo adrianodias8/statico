@@ -1,0 +1,7 @@
+[
+  { "name": "start", "title": "Getting started", "hue": "rose" },
+  { "name": "pages", "title": "Building pages", "hue": "teal" },
+  { "name": "content", "title": "Content and data", "hue": "amber" },
+  { "name": "ship", "title": "Build and deploy", "hue": "indigo" },
+  { "name": "ref", "title": "Reference", "hue": "olive" }
+]
