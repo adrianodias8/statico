@@ -174,6 +174,19 @@ fn builds_every_feature() {
         second.contains(r#"<span class="badge">inline</span>"#),
         "includes inside markdown"
     );
+    // The same markdown reached through a collection: a listing that prints
+    // `{post.html}`, and the Atom feed.
+    let listing = read(&out, "blog/index.html");
+    assert!(
+        listing.contains(r#"<span class="badge">inline</span>"#) && !listing.contains("<include"),
+        "includes expand in {{post.html}}"
+    );
+    let feed = read(&out, "blog/feed.xml");
+    assert!(
+        feed.contains("&lt;span class=&quot;badge&quot;&gt;inline")
+            && !feed.contains("&lt;include src"),
+        "includes expand in feeds"
+    );
 
     // Pagination
     let p1 = read(&out, "blog/index.html");

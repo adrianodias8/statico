@@ -832,7 +832,11 @@ impl Site {
                         Value::String(format!("{}/", link.trim_end_matches('/'))),
                     );
                     item.insert("slug".into(), Value::String(slug));
-                    item.insert("html".into(), Value::String(rendered.html.clone()));
+                    // Same as on the post's own page, so `{post.html}` in a
+                    // listing and the feed don't publish raw `<include>` tags.
+                    let html = Composer { root: &self.root }
+                        .resolve_includes_lenient(&rendered.html, &origin)?;
+                    item.insert("html".into(), Value::String(html));
                     item.insert("content".into(), Value::String(doc.body));
                     Ok(Some(Value::Object(item)))
                 })
