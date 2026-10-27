@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Statico">
+  <title>Statico</title>
+  <rect width="256" height="256" rx="58" fill="#2a211b"/>
+  <g>
+    <rect x="52" y="70" width="152" height="26" rx="13" fill="#f4ece4"/>
+    <rect x="52" y="115" width="100" height="26" rx="13" fill="#e2572b"/>
+    <rect x="52" y="160" width="132" height="26" rx="13" fill="#f4ece4"/>
+  </g>
+</svg>

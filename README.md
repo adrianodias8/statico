@@ -1,4 +1,6 @@
-# ⚡ Statico
+<img src="assets/logo.svg" alt="" width="84">
+
+# Statico
 
 **Plain HTML in, fast static sites out.** One binary. No framework, no Node,
 no template language to learn — just HTML files and a handful of tags.
