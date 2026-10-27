@@ -24,6 +24,13 @@
                 <a href="/posts/feed.xml">Feed</a>
             </nav>
         </div>
+        <div class="wrap masthead__key">
+            <p class="masthead__table">Table {table}</p>
+            <ul class="masthead__lines" aria-label="Lines">
+                <ForEach collection="lines" as="l"><li><a class="badge badge--{l.color}" href="/lines/{l.name}/"><span class="badge__code">{l.code}</span><span class="badge__name">{l.title}</span></a></li></ForEach>
+            </ul>
+            <p class="masthead__valid">Valid <ForEach content="posts" as="p" orderBy="date" count="1"><time datetime="{p.date}">{p.date|date:"%d %b %Y"}</time></ForEach> to <ForEach content="posts" as="p" orderBy="date, desc" count="1"><time datetime="{p.date}">{p.date|date:"%d %b %Y"}</time></ForEach></p>
+        </div>
     </header>
     <main id="main">
         {slot}

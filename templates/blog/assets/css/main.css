@@ -32,15 +32,15 @@
 @media (prefers-color-scheme: dark) {
     :root {
         /* The departures board at night. */
-        --paper: oklch(18.5% 0.012 262);
-        --paper-2: oklch(23% 0.014 262);
+        --paper: oklch(17% 0.003 100);
+        --paper-2: oklch(21.5% 0.003 100);
         --ink: oklch(95% 0.004 100);
-        --ink-soft: oklch(76% 0.01 262);
-        --rule: oklch(34% 0.014 262);
+        --ink-soft: oklch(76% 0.004 100);
+        --rule: oklch(34% 0.004 100);
         --line-red: oklch(66% 0.18 28);
         --line-blue: oklch(70% 0.13 258);
         --line-green: oklch(70% 0.14 150);
-        --on-line: oklch(16% 0.012 262);
+        --on-line: oklch(15% 0.003 100);
     }
 }
 
@@ -84,6 +84,16 @@ a:hover { text-decoration-color: currentColor; }
 .masthead__nav a { text-decoration: none; color: var(--ink-soft); padding-block: 0.3rem; }
 .masthead__nav a:hover, .masthead__nav a[aria-current] { color: var(--ink); }
 .masthead__nav a[aria-current] { box-shadow: inset 0 -3px 0 var(--line-red); }
+.masthead__key {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.75rem;
+    padding-block: 0.6rem 0.7rem;
+    border-top: 1px solid var(--rule-strong);
+    font-stretch: 87.5%; font-size: 0.875rem; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.masthead__table { font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--line-red); }
+.masthead__lines { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; }
+.masthead__valid { margin-left: auto; color: var(--ink-soft); }
 
 /* Table opener: the number and the table's title */
 
@@ -94,7 +104,6 @@ a:hover { text-decoration-color: currentColor; }
     align-items: end;
     padding-block: clamp(2.5rem, 2rem + 3vw, 4.5rem) 1.5rem;
 }
-.opener__number { font-weight: 700; font-stretch: 87.5%; text-transform: uppercase; letter-spacing: 0.05em; color: var(--line-red); margin-bottom: 0.5rem; }
 .opener h1 {
     margin: 0;
     font-weight: 800;
@@ -124,13 +133,15 @@ a:hover { text-decoration-color: currentColor; }
 .tt td, .tt tbody th { padding: 1rem 1.25rem 1rem 0; border-bottom: 1px solid var(--rule); vertical-align: top; text-align: left; }
 .tt tbody tr { transition: background-color 120ms ease-out; }
 .tt tbody tr:hover { background: var(--paper-2); }
-.tt__date { white-space: nowrap; font-weight: 600; font-size: 1rem; width: 8.5rem; padding-top: 1.15rem; }
+.tt__date { white-space: nowrap; font-weight: 800; font-stretch: 75%; font-size: 1.2rem; width: 8.5rem; padding-top: 1.05rem; }
+.tt td + td, .tt th + th { padding-left: 1rem; border-left: 1px solid var(--rule); }
 .tt__title { display: block; font-weight: 750; font-stretch: 87.5%; font-size: 1.3rem; line-height: 1.2; text-decoration: none; }
 .tt__title:hover { text-decoration: underline; text-decoration-color: var(--line-red); text-decoration-thickness: 2px; }
 .tt__about { display: block; color: var(--ink-soft); margin-top: 0.3rem; max-width: 60ch; }
-.tt__lines { width: 1%; white-space: nowrap; padding-top: 1.15rem; }
-.tt .tt__journey { text-align: right; white-space: nowrap; width: 1%; padding-right: 0; padding-top: 1.15rem; }
-td.tt__journey { font-weight: 600; }
+.tt__lines { width: 1%; white-space: nowrap; }
+td.tt__lines { padding-top: 1.15rem; }
+.tt .tt__journey { text-align: right; white-space: nowrap; width: 1%; padding-right: 0; }
+td.tt__journey { font-weight: 800; font-stretch: 75%; font-size: 1.2rem; padding-top: 1.05rem; }
 .tt--compact tbody th { font-weight: 700; font-stretch: 87.5%; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8125rem; width: 7rem; padding-top: 1.15rem; color: var(--ink-soft); }
 .tt--compact { border-top: 3px solid var(--rule-strong); }
 
@@ -160,11 +171,12 @@ td.tt__journey { font-weight: 600; }
 .tt .badge__name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .badge:hover .badge__code { outline: 2px solid var(--ink); outline-offset: 1px; }
 .badge--big .badge__code { width: 3.2rem; height: 3.2rem; font-size: 1.7rem; border-radius: 5px; }
+.line-title { display: flex; align-items: center; gap: 1.25rem; }
+.line-title .badge--lit { margin-left: 0.45rem; }
 /* The line you are on burns brightest. */
 .badge--red.badge--lit .badge__code { box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--line-red); }
 .badge--blue.badge--lit .badge__code { box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--line-blue); }
 .badge--green.badge--lit .badge__code { box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--line-green); }
-.opener__number .badge--lit { margin: 0.5rem 0 0.75rem 0.45rem; }
 
 .tt-notes { margin-top: 1.25rem; color: var(--ink-soft); font-size: 0.9375rem; max-width: 70ch; }
 .tt-notes a { color: var(--ink); }
@@ -182,10 +194,8 @@ td.tt__journey { font-weight: 600; }
 /* A post: the frame's head, then the reading column */
 
 .post__head { padding-block: clamp(2rem, 1.5rem + 3vw, 4rem) 0; }
-.running-head { font-weight: 700; font-stretch: 87.5%; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8125rem; color: var(--ink-soft); }
-.running-head a { color: var(--line-red); text-decoration: none; }
 .post__head h1 {
-    margin: 1rem 0 1.75rem;
+    margin: 0 0 1.75rem;
     font-weight: 800;
     font-stretch: 75%;
     font-size: clamp(2.5rem, 1.5rem + 4vw, 4.75rem);
@@ -249,11 +259,12 @@ td.tt__journey { font-weight: 600; }
 @media (max-width: 720px) {
     .opener { grid-template-columns: 1fr; }
     .tt thead { display: none; }
-    .tt tbody tr { display: grid; grid-template-columns: 1fr auto; padding: 0.9rem 0; border-bottom: 1px solid var(--rule); }
-    .tt td, .tt tbody th { border: 0; padding: 0.1rem 0; width: auto; }
-    .tt .tt__post { grid-column: 1 / -1; order: -1; padding-bottom: 0.5rem; }
+    .tt tbody tr { display: grid; grid-template-columns: auto 1fr auto; align-items: center; column-gap: 0.9rem; padding: 0.9rem 0; border-bottom: 1px solid var(--rule); }
+    .tt td, .tt tbody th, .tt td + td { border: 0; padding: 0; width: auto; }
+    .tt .tt__post { grid-column: 1 / -1; order: -1; padding-bottom: 0.6rem; }
+    .tt td.tt__date, .tt td.tt__journey, .tt td.tt__lines { padding-top: 0; }
     .tt .tt__journey { text-align: right; }
-    .tt__lines { grid-column: 1 / -1; }
+    .masthead__valid { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 

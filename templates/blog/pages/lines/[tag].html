@@ -1,10 +1,7 @@
-<layout src="base.html" title="Line: {tag} · {site.name}">
+<layout src="base.html" title="Line: {tag} · {site.name}" table="2">
 
 <section class="opener wrap">
-    <div class="opener__table">
-        <ForEach collection="lines" as="l" where="l.name == term.slug"><p class="opener__number"><span class="badge badge--{l.color} badge--big badge--lit"><span class="badge__code">{l.code}</span></span></p>
-        <h1>{l.title}</h1></ForEach>
-    </div>
+    <ForEach collection="lines" as="l" where="l.name == term.slug"><h1 class="line-title"><span class="badge badge--{l.color} badge--big badge--lit"><span class="badge__code">{l.code}</span></span>{l.title}</h1></ForEach>
     <p class="opener__about">Departures on this line: {term.count}. <a href="/lines/">All lines</a></p>
 </section>
 

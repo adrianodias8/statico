@@ -1,8 +1,7 @@
-<layout src="base.html" title="{frontmatter.title} · {site.name}">
+<layout src="base.html" title="{frontmatter.title} · {site.name}" table="1">
 
 <article class="post">
     <header class="post__head wrap">
-        <p class="running-head"><a href="/">Table 1</a> · Departure of {frontmatter.date|date:"%-d %B %Y"}</p>
         <h1>{frontmatter.title}</h1>
         <dl class="post__facts">
             <div><dt>Departs</dt><dd><time datetime="{frontmatter.date}">{frontmatter.date|date:"%d %b %Y"}</time></dd></div>
