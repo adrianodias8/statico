@@ -77,7 +77,7 @@ public/                       →  copied as-is
 ```
 
 The full reference ships in the binary: `statico docs`, `statico docs loops`,
-`statico docs --all`, or read [docs/REFERENCE.md](docs/REFERENCE.md).
+`statico docs --all`, or read the [documentation site](https://adrianodias8.github.io/statico/).
 
 ## Commands
 
@@ -125,7 +125,8 @@ notice are fixes:
 
 ## Project docs
 
-- [docs/REFERENCE.md](docs/REFERENCE.md) — complete syntax and configuration
+- [Documentation](https://adrianodias8.github.io/statico/), built with Statico from the `docs` template
+- [docs/REFERENCE.md](docs/REFERENCE.md) — complete syntax and configuration (the source of the site's reference pages)
 - [ROADMAP.md](ROADMAP.md) — what's done, what's next, and why
 - [docs/RESEARCH.md](docs/RESEARCH.md) — what users of other generators are missing
 - [packaging/README.md](packaging/README.md) — releases and distribution

@@ -44,11 +44,23 @@ warning (`S109`) naming the key to rename.
 independent evaluator), the tag scanner and the `<ForEach>`/`<If>` parser;
 snapshots of every file the fixture site builds.
 
+**Templates** — `portfolio` (an interactive operating system), `blog` (a
+railway timetable around a calm reading column) and `docs` (a type-specimen
+book) ship inside the binary and work offline, each checked clean in CI.
+Statico's own [documentation](https://adrianodias8.github.io/statico/) is
+built from the `docs` template on every push.
+
+**Sub-path sites** — a site built for `https://user.github.io/project` keeps
+its stylesheets, fonts and links inside `/project`, so GitHub Pages project
+sites work. Plain CSS is copied as written instead of being run through
+Tailwind.
+
 **Fixes** — a deadlock when several pages shared a content collection;
 deeply nested conditions aborting the process instead of erroring;
 `<include>` tags left raw in `{post.html}` and in Atom feeds; condition and
 loop errors pointing at a line in the composed page instead of the layout,
-include or page that was actually written.
+include or page that was actually written; `{ url('…') }` rewritten inside
+code examples; placeholders shown in code reported as unresolved.
 
 ## Next (in priority order)
 
