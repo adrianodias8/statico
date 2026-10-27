@@ -163,8 +163,9 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
                 "<html> has no lang attribute".into(),
             ));
         }
-        // Unresolved placeholders outside <script>.
-        let visible = strip_scripts(&html);
+        // Unresolved placeholders in the page's text. Scripts are code, and so
+        // are <code> and <pre>: a page documenting `{site.name}` shows it on purpose.
+        let visible = strip_blocks(&html);
         for m in UNRESOLVED.find_iter(&visible).take(5) {
             let p = m.as_str();
             warnings.push(if is_private_env_ref(p) {
@@ -356,13 +357,22 @@ fn leaked_env_values(root: &Path, out: &Path) -> Vec<Diagnostic> {
     found
 }
 
-fn strip_scripts(html: &str) -> String {
+fn strip_blocks(html: &str) -> String {
+    const BLOCKS: [(&str, &str); 3] = [
+        ("<script", "</script>"),
+        ("<pre", "</pre>"),
+        ("<code", "</code>"),
+    ];
     let mut out = String::with_capacity(html.len());
     let mut rest = html;
-    while let Some(i) = rest.find("<script") {
+    while let Some((i, close)) = BLOCKS
+        .iter()
+        .filter_map(|(open, close)| rest.find(open).map(|i| (i, *close)))
+        .min_by_key(|(i, _)| *i)
+    {
         out.push_str(&rest[..i]);
-        match rest[i..].find("</script>") {
-            Some(e) => rest = &rest[i + e + 9..],
+        match rest[i..].find(close) {
+            Some(e) => rest = &rest[i + e + close.len()..],
             None => return out,
         }
     }
@@ -407,6 +417,12 @@ mod tests {
     fn normalizes() {
         assert_eq!(super::normalize("/blog/../about/"), "/about/");
         assert_eq!(super::normalize("/a/./b"), "/a/b");
+    }
+
+    #[test]
+    fn placeholders_in_code_are_not_flagged() {
+        let html = "<p>{site.nme}</p><code>{site.name}</code><pre>{page.title}</pre><script>x = {a.b}</script>";
+        assert_eq!(super::strip_blocks(html), "<p>{site.nme}</p>");
     }
 
     #[test]
