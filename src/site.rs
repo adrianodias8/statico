@@ -781,38 +781,41 @@ impl Site {
             .collect();
         files.sort();
         use rayon::prelude::*;
-        let loaded: Vec<Result<Option<Value>>> = files
-            .par_iter()
-            .map(|f| {
-                let origin = self.rel(f);
-                let src = std::fs::read_to_string(f)?;
-                let doc = markdown::parse_front_matter(&src, &origin)?;
-                let mut item = doc.front_matter;
-                if self.mode == Mode::Build && item.get("draft").is_some_and(template::expr::truthy)
-                {
-                    return Ok(None);
-                }
-                let rel = to_url_path(
-                    &f.strip_prefix(self.root.join("content"))?
-                        .with_extension(""),
-                );
-                let slug = f.file_stem().unwrap().to_string_lossy().to_string();
-                let link = format!(
-                    "/{}",
-                    rel.trim_end_matches("/index").trim_end_matches("index")
-                );
-                let rendered = self.render_markdown(&doc.body);
-                item.insert("link".into(), Value::String(link.clone()));
-                item.insert(
-                    "url".into(),
-                    Value::String(format!("{}/", link.trim_end_matches('/'))),
-                );
-                item.insert("slug".into(), Value::String(slug));
-                item.insert("html".into(), Value::String(rendered.html.clone()));
-                item.insert("content".into(), Value::String(doc.body));
-                Ok(Some(Value::Object(item)))
-            })
-            .collect();
+        let loaded: Vec<Result<Option<Value>>> = off_the_page_pool(|| {
+            files
+                .par_iter()
+                .map(|f| {
+                    let origin = self.rel(f);
+                    let src = std::fs::read_to_string(f)?;
+                    let doc = markdown::parse_front_matter(&src, &origin)?;
+                    let mut item = doc.front_matter;
+                    if self.mode == Mode::Build
+                        && item.get("draft").is_some_and(template::expr::truthy)
+                    {
+                        return Ok(None);
+                    }
+                    let rel = to_url_path(
+                        &f.strip_prefix(self.root.join("content"))?
+                            .with_extension(""),
+                    );
+                    let slug = f.file_stem().unwrap().to_string_lossy().to_string();
+                    let link = format!(
+                        "/{}",
+                        rel.trim_end_matches("/index").trim_end_matches("index")
+                    );
+                    let rendered = self.render_markdown(&doc.body);
+                    item.insert("link".into(), Value::String(link.clone()));
+                    item.insert(
+                        "url".into(),
+                        Value::String(format!("{}/", link.trim_end_matches('/'))),
+                    );
+                    item.insert("slug".into(), Value::String(slug));
+                    item.insert("html".into(), Value::String(rendered.html.clone()));
+                    item.insert("content".into(), Value::String(doc.body));
+                    Ok(Some(Value::Object(item)))
+                })
+                .collect()
+        });
         let mut items = Vec::with_capacity(loaded.len());
         for r in loaded {
             if let Some(v) = r? {
@@ -914,6 +917,28 @@ impl DataSource for Site {
 }
 
 // ------------------------------------------------------------------ helpers
+
+/// Threads for loading a content folder in parallel. `cached` holds a
+/// collection's `OnceLock` while it loads, and a rayon worker waiting on a
+/// `par_iter` steals other jobs meanwhile: if it stole a page that needs the
+/// same collection, it would wait on its own initialisation forever.
+static LOADER: LazyLock<rayon::ThreadPool> = LazyLock::new(|| {
+    rayon::ThreadPoolBuilder::new()
+        .thread_name(|i| format!("statico-load-{i}"))
+        .build()
+        .expect("cannot start content loader threads")
+});
+
+/// Run `op` on [`LOADER`] and block until it finishes. The hop through a plain
+/// thread matters: a page worker calling `LOADER.install` directly would still
+/// steal page jobs while it waits.
+fn off_the_page_pool<T: Send>(op: impl FnOnce() -> T + Send) -> T {
+    std::thread::scope(|s| {
+        s.spawn(|| LOADER.install(op))
+            .join()
+            .unwrap_or_else(|e| std::panic::resume_unwind(e))
+    })
+}
 
 /// Front matter keys for a taxonomy name: `tag` → [tags, tag].
 fn taxonomy_keys(name: &str) -> Vec<String> {
