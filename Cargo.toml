@@ -34,6 +34,8 @@ tar = "0.4"
 ring = "0.17"
 
 [dev-dependencies]
+insta = "1"
+proptest = "1"
 tempfile = "3"
 
 [profile.release]
