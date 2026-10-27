@@ -137,4 +137,4 @@ cargo clippy --all-targets -- -D warnings
 
 ## License
 
-ISC. Statico began as a rewrite of Static by [Tony Lea](https://github.com/tnylea) / DevDojo.
+MIT. Statico began as a rewrite of Static by [Tony Lea](https://github.com/tnylea) / DevDojo.

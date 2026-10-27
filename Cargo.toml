@@ -1,7 +1,7 @@
 [package]
 name = "statico-cli"
 description = "Statico — plain HTML into fast static sites. A single-binary static site generator."
-license = "ISC"
+license = "MIT"
 version = "0.1.0"
 edition = "2024"
 

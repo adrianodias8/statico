@@ -4,7 +4,7 @@ class Statico < Formula
   desc "Plain HTML into fast static sites (single-binary SSG)"
   homepage "https://github.com/adrianodias8/statico"
   version "0.1.0"
-  license "ISC"
+  license "MIT"
 
   on_macos do
     on_arm do
