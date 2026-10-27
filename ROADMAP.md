@@ -46,7 +46,9 @@ snapshots of every file the fixture site builds.
 
 **Fixes** — a deadlock when several pages shared a content collection;
 deeply nested conditions aborting the process instead of erroring;
-`<include>` tags left raw in `{post.html}` and in Atom feeds.
+`<include>` tags left raw in `{post.html}` and in Atom feeds; condition and
+loop errors pointing at a line in the composed page instead of the layout,
+include or page that was actually written.
 
 ## Next (in priority order)
 

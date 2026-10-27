@@ -55,6 +55,17 @@ fn builds_every_feature() {
     ] {
         assert!(out.join(p).is_file(), "{p} not built");
     }
+    // Composition markers (see template::compose::locate) never reach the output.
+    for e in walkdir::WalkDir::new(&out) {
+        let e = e.unwrap();
+        if let Ok(text) = std::fs::read_to_string(e.path()) {
+            assert!(
+                !text.contains('\u{E000}'),
+                "marker in {}",
+                e.path().display()
+            );
+        }
+    }
     assert!(
         !out.join("blog/draft/index.html").exists(),
         "drafts must not be built"
@@ -363,6 +374,86 @@ fn private_env_stays_out_of_the_output() {
         r.errors
     );
     assert!(r.errors.iter().all(|e| !e.message.contains(SECRET)));
+}
+
+/// Build a copy of the fixture with `files` written over it and return each
+/// error's `file:line`, deduplicated (a broken layout fails every page).
+fn error_locations(files: &[(&str, &str)]) -> Vec<String> {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("p");
+    copy(&fixture(), &root);
+    for (path, body) in files {
+        std::fs::write(root.join(path), body).unwrap();
+    }
+    let r = statico::check::check(&root, None, false).unwrap();
+    let mut at: Vec<String> = r
+        .errors
+        .iter()
+        .map(|e| {
+            format!(
+                "{}:{}",
+                e.file.as_deref().unwrap_or("?"),
+                e.line.unwrap_or(0)
+            )
+        })
+        .collect();
+    at.dedup();
+    at
+}
+
+#[test]
+fn render_errors_point_at_the_file_that_was_written() {
+    const BAD: &str = "<If condition=\"(\">x</If>";
+    let page = |body: &str| format!("<layout src=\"base.html\" title=\"T\">{body}</layout>");
+
+    // In the page itself, below the <layout> tag.
+    assert_eq!(
+        error_locations(&[("pages/bad.html", &page(&format!("\n<p>x</p>\n{BAD}")))]),
+        ["pages/bad.html:3"]
+    );
+    // In the page, after an include that spans several lines.
+    assert_eq!(
+        error_locations(&[
+            ("includes/three.html", "one\ntwo\nthree\n"),
+            (
+                "pages/bad.html",
+                &page(&format!(
+                    "\n<include src=\"three.html\"></include>\n\n{BAD}"
+                )),
+            ),
+        ]),
+        ["pages/bad.html:4"]
+    );
+    // In an include, and in an include of an include.
+    assert_eq!(
+        error_locations(&[
+            ("includes/deep.html", &format!("\n\n{BAD}")),
+            ("includes/mid.html", "mid\n<include src=\"deep.html\" />"),
+            (
+                "pages/bad.html",
+                &page("\n\n<include src=\"mid.html\"></include>")
+            ),
+        ]),
+        ["includes/deep.html:3"]
+    );
+    // In a layout, after the {slot} the page was spliced into.
+    let base = std::fs::read_to_string(fixture().join("layouts/base.html")).unwrap();
+    let slot_line = base.lines().position(|l| l.contains("{slot}")).unwrap() + 1;
+    assert_eq!(
+        error_locations(&[(
+            "layouts/base.html",
+            &base.replacen("{slot}", &format!("{{slot}}\n{BAD}"), 1),
+        )]),
+        [format!("layouts/base.html:{}", slot_line + 1)]
+    );
+    // In a layout that is itself wrapped in another layout.
+    assert_eq!(
+        error_locations(&[(
+            "layouts/docs.html",
+            &format!("<layout src=\"base.html\" title=\"{{title}}\">\n\n{BAD}{{slot}}</layout>"),
+        )]),
+        ["layouts/docs.html:3"]
+    );
 }
 
 #[test]

@@ -14,8 +14,9 @@ use regex::Regex;
 use serde_json::Value;
 use std::sync::LazyLock;
 
+use compose::strip_marks;
 use expr::{Resolver, eval_condition};
-use tags::{find_tags, line_of};
+use tags::find_tags;
 
 #[derive(Debug, Clone)]
 pub enum Node {
@@ -23,12 +24,13 @@ pub enum Node {
     ForEach {
         attrs: Vec<(String, String)>,
         body: Vec<Node>,
-        line: usize,
+        /// `file:line` of the opening tag in the file the user wrote, for errors.
+        at: String,
     },
     If {
         /// `(condition, body)` pairs; a `None` condition is the `<Else>` branch.
         branches: Vec<(Option<String>, Vec<Node>)>,
-        line: usize,
+        at: String,
     },
 }
 
@@ -37,11 +39,11 @@ enum Frame {
     ForEach {
         attrs: Vec<(String, String)>,
         body: Vec<Node>,
-        line: usize,
+        at: String,
     },
     If {
         branches: Vec<(Option<String>, Vec<Node>)>,
-        line: usize,
+        at: String,
     },
 }
 
@@ -54,7 +56,8 @@ impl Frame {
     }
 }
 
-/// Parse a composed page into a node tree. `origin` is only used for errors.
+/// Parse a composed page into a node tree. Errors name the file and line each
+/// tag came from (see [`compose::locate`]), falling back to `origin`.
 pub fn parse(src: &str, origin: &str) -> Result<Vec<Node>> {
     let tags = find_tags(src, &["ForEach", "If", "ElseIf", "Else"]);
     let mut stack = vec![Frame::Root(Vec::new())];
@@ -65,42 +68,38 @@ pub fn parse(src: &str, origin: &str) -> Result<Vec<Node>> {
             stack
                 .last_mut()
                 .unwrap()
-                .push(Node::Text(src[pos..t.start].to_string()));
+                .push(Node::Text(strip_marks(&src[pos..t.start]).into_owned()));
         }
         pos = t.end;
-        let line = line_of(src, t.start);
+        let at = compose::at(src, t.start, origin);
         match (t.name.as_str(), t.closing) {
             ("ForEach", false) => stack.push(Frame::ForEach {
                 attrs: t.attrs,
                 body: Vec::new(),
-                line,
+                at,
             }),
             ("If", false) => {
                 let cond = t
                     .attr("condition")
-                    .with_context(|| {
-                        format!("{origin}:{line}: <If> is missing a `condition` attribute")
-                    })?
+                    .with_context(|| format!("{at}: <If> is missing a `condition` attribute"))?
                     .to_string();
                 stack.push(Frame::If {
                     branches: vec![(Some(cond), Vec::new())],
-                    line,
+                    at,
                 });
             }
             ("ElseIf", false) | ("Else", false) => {
                 let Some(Frame::If { branches, .. }) = stack.last_mut() else {
-                    bail!("{origin}:{line}: <{}> must be inside an <If>", t.name);
+                    bail!("{at}: <{}> must be inside an <If>", t.name);
                 };
                 if branches.last().is_some_and(|b| b.0.is_none()) {
-                    bail!("{origin}:{line}: <{}> after <Else>", t.name);
+                    bail!("{at}: <{}> after <Else>", t.name);
                 }
                 let cond = if t.name == "ElseIf" {
                     Some(
                         t.attr("condition")
                             .with_context(|| {
-                                format!(
-                                    "{origin}:{line}: <ElseIf> is missing a `condition` attribute"
-                                )
+                                format!("{at}: <ElseIf> is missing a `condition` attribute")
                             })?
                             .to_string(),
                     )
@@ -116,22 +115,20 @@ pub fn parse(src: &str, origin: &str) -> Result<Vec<Node>> {
             (name, true) => {
                 let frame = stack.pop().unwrap();
                 let node = match (name, frame) {
-                    ("ForEach", Frame::ForEach { attrs, body, line }) => {
-                        Node::ForEach { attrs, body, line }
+                    ("ForEach", Frame::ForEach { attrs, body, at }) => {
+                        Node::ForEach { attrs, body, at }
                     }
-                    ("If", Frame::If { branches, line }) => Node::If { branches, line },
+                    ("If", Frame::If { branches, at }) => Node::If { branches, at },
                     (_, Frame::Root(_)) => {
-                        bail!("{origin}:{line}: unexpected </{name}> with no matching opening tag")
+                        bail!("{at}: unexpected </{name}> with no matching opening tag")
                     }
-                    (_, Frame::ForEach { line: l, .. }) => {
+                    (_, Frame::ForEach { at: opened, .. }) => {
                         bail!(
-                            "{origin}:{line}: found </{name}> but the <ForEach> opened on line {l} is still open"
+                            "{at}: found </{name}> but the <ForEach> opened at {opened} is still open"
                         )
                     }
-                    (_, Frame::If { line: l, .. }) => {
-                        bail!(
-                            "{origin}:{line}: found </{name}> but the <If> opened on line {l} is still open"
-                        )
+                    (_, Frame::If { at: opened, .. }) => {
+                        bail!("{at}: found </{name}> but the <If> opened at {opened} is still open")
                     }
                 };
                 stack.last_mut().unwrap().push(node);
@@ -143,15 +140,15 @@ pub fn parse(src: &str, origin: &str) -> Result<Vec<Node>> {
         stack
             .last_mut()
             .unwrap()
-            .push(Node::Text(src[pos..].to_string()));
+            .push(Node::Text(strip_marks(&src[pos..]).into_owned()));
     }
     if stack.len() > 1 {
-        let (kind, line) = match stack.last().unwrap() {
-            Frame::ForEach { line, .. } => ("ForEach", *line),
-            Frame::If { line, .. } => ("If", *line),
+        let (kind, at) = match stack.last().unwrap() {
+            Frame::ForEach { at, .. } => ("ForEach", at),
+            Frame::If { at, .. } => ("If", at),
             Frame::Root(_) => unreachable!(),
         };
-        bail!("{origin}:{line}: <{kind}> is never closed");
+        bail!("{at}: <{kind}> is never closed");
     }
     match stack.pop() {
         Some(Frame::Root(nodes)) => Ok(nodes),
@@ -174,7 +171,6 @@ pub struct Scope<'a> {
     /// Fields of the current loop item, reachable as bare identifiers in conditions.
     bare: Vec<Value>,
     data: &'a dyn DataSource,
-    origin: String,
     /// `relative` or the absolute base URL (for the `abs_url` filter).
     pub base_url: String,
     /// Which page of a `<ForEach paginate="N">` to render (1-based).
@@ -184,12 +180,11 @@ pub struct Scope<'a> {
 }
 
 impl<'a> Scope<'a> {
-    pub fn new(data: &'a dyn DataSource, origin: impl Into<String>) -> Self {
+    pub fn new(data: &'a dyn DataSource) -> Self {
         Scope {
             vars: Vec::new(),
             bare: Vec::new(),
             data,
-            origin: origin.into(),
             base_url: "relative".into(),
             page_number: 1,
             paginated: None,
@@ -324,13 +319,12 @@ pub fn render(nodes: &[Node], scope: &mut Scope, out: &mut String) -> Result<()>
     for n in nodes {
         match n {
             Node::Text(t) => out.push_str(&substitute(t, scope)),
-            Node::If { branches, line } => {
+            Node::If { branches, at } => {
                 for (cond, body) in branches {
                     let hit = match cond {
                         None => true,
-                        Some(c) => eval_condition(c, scope).with_context(|| {
-                            format!("{}:{line}: invalid condition `{c}`", scope.origin)
-                        })?,
+                        Some(c) => eval_condition(c, scope)
+                            .with_context(|| format!("{at}: invalid condition `{c}`"))?,
                     };
                     if hit {
                         render(body, scope, out)?;
@@ -338,7 +332,7 @@ pub fn render(nodes: &[Node], scope: &mut Scope, out: &mut String) -> Result<()>
                     }
                 }
             }
-            Node::ForEach { attrs, body, line } => render_foreach(attrs, body, *line, scope, out)?,
+            Node::ForEach { attrs, body, at } => render_foreach(attrs, body, at, scope, out)?,
         }
     }
     Ok(())
@@ -354,12 +348,11 @@ fn attr<'a>(attrs: &'a [(String, String)], key: &str) -> Option<&'a str> {
 fn render_foreach(
     attrs: &[(String, String)],
     body: &[Node],
-    line: usize,
+    at: &str,
     scope: &mut Scope,
     out: &mut String,
 ) -> Result<()> {
-    let origin = scope.origin.clone();
-    let ctx = || format!("{origin}:{line}: <ForEach>");
+    let ctx = || format!("{at}: <ForEach>");
 
     // Resolve the data and the default loop variable name.
     let (items, default_alias) = if let Some(dir) = attr(attrs, "content") {
@@ -521,7 +514,7 @@ mod tests {
 
     fn run(src: &str) -> String {
         let nodes = parse(src, "test").unwrap();
-        let mut scope = Scope::new(&Data, "test");
+        let mut scope = Scope::new(&Data);
         scope.set("frontmatter", json!({"title": "T", "draft": false}));
         let mut out = String::new();
         render(&nodes, &mut scope, &mut out).unwrap();
@@ -599,7 +592,7 @@ mod tests {
             "t",
         )
         .unwrap();
-        let mut scope = Scope::new(&Data, "t");
+        let mut scope = Scope::new(&Data);
         scope.page_number = 2;
         let mut out = String::new();
         render(&nodes, &mut scope, &mut out).unwrap();

@@ -486,8 +486,8 @@ impl Site {
             .collect()
     }
 
-    fn base_scope<'a>(&'a self, origin: &str, url: &str, source: &Path, page: usize) -> Scope<'a> {
-        let mut scope = Scope::new(self, origin);
+    fn base_scope<'a>(&'a self, url: &str, source: &Path, page: usize) -> Scope<'a> {
+        let mut scope = Scope::new(self);
         scope.base_url = self.base_url.clone();
         scope.page_number = page;
         scope.set("env", Value::Object(self.env.clone()));
@@ -528,7 +528,7 @@ impl Site {
         let origin = self.rel(&tpl_path);
         self.validate(&tpl_path)?;
         let (mut html, layout_attrs) = composer.compose_page_with_attrs(&tpl_path)?;
-        let mut scope = self.base_scope(&origin, url, source.path(), page);
+        let mut scope = self.base_scope(url, source.path(), page);
 
         let mut fm = Value::Null;
         let mut md_source = None;

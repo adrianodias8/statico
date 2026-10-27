@@ -398,7 +398,7 @@ proptest! {
         prop_assert!(nodes.is_ok(), "{src:?}: {:?}", nodes.err());
         let nodes = nodes.unwrap();
         prop_assert_eq!(shape_of_parsed(&nodes), shape_of_generated(&t), "{}", src);
-        let mut scope = Scope::new(&Items, "prop");
+        let mut scope = Scope::new(&Items);
         scope.set("x", json!("a"));
         let mut out = String::new();
         let rendered = render(&nodes, &mut scope, &mut out);
@@ -421,7 +421,7 @@ proptest! {
     ) {
         let src = parts.concat();
         if let Ok(nodes) = parse(&src, "soup") {
-            let mut scope = Scope::new(&Items, "soup");
+            let mut scope = Scope::new(&Items);
             let mut out = String::new();
             let _ = render(&nodes, &mut scope, &mut out);
         }
