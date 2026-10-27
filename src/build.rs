@@ -144,6 +144,7 @@ fn build_route(
         if images {
             html = postprocess::optimize_images(&html, out, &site.base_url);
         }
+        html = postprocess::prefix_root_paths(&html, postprocess::base_path(&site.base_url));
         let text = postprocess::main_text(&html);
         if minify {
             html = postprocess::minify(&html);
@@ -200,6 +201,11 @@ pub fn build(root: &Path, opts: BuildOptions) -> Result<Report> {
         js?;
         site.css_compiled.store(css?, Ordering::Relaxed);
     }
+
+    // A site served under a sub-path (a GitHub Pages project site) needs its
+    // root-relative URLs moved inside it, in stylesheets as well as pages.
+    let base_path = postprocess::base_path(&site.base_url).to_string();
+    postprocess::prefix_css_files(&out.join("assets"), &base_path)?;
 
     // 3. Fingerprint CSS/JS for long-term caching.
     let assets_map = if opts

@@ -1,8 +1,10 @@
 //! Build-time HTML post-processing: image dimensions + lazy loading,
 //! fingerprinted asset URLs, minification, and plain-text extraction.
 
+use regex::Regex;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 use crate::template::filters::strip_html;
 use crate::template::tags::{find_tags, scan_tag};
@@ -81,6 +83,96 @@ pub fn optimize_images(html: &str, out_dir: &Path, base_url: &str) -> String {
     }
     out.push_str(&html[pos..]);
     out
+}
+
+/// The path a site is served under, from its base URL:
+/// `https://user.github.io/project` gives `/project`. Empty for a site at the
+/// root of its domain, and for relative builds.
+pub fn base_path(base_url: &str) -> &str {
+    if base_url == "relative" {
+        return "";
+    }
+    let rest = base_url.split_once("://").map_or(base_url, |(_, r)| r);
+    rest.find('/')
+        .map_or("", |i| rest[i..].trim_end_matches('/'))
+}
+
+/// `value` moved under `prefix` if it is root-relative (`/docs/`), and left
+/// alone if it is absolute, protocol-relative (`//cdn`) or already inside.
+fn under(prefix: &str, value: &str) -> Option<String> {
+    let inside = value == prefix || value.starts_with(&format!("{prefix}/"));
+    (value.starts_with('/') && !value.starts_with("//") && !inside)
+        .then(|| format!("{prefix}{value}"))
+}
+
+static ROOT_ATTR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(\s(?:href|src|action|poster)\s*=\s*)(["'])(/[^"']*)"#).unwrap()
+});
+static SRCSET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(\ssrcset\s*=\s*)(["'])([^"']*)"#).unwrap());
+static CSS_URL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"url\(\s*(["']?)(/[^)"']*)"#).unwrap());
+
+/// For a site served under a sub-path, such as a GitHub Pages project site at
+/// `https://user.github.io/project`, point root-relative URLs in attributes
+/// inside it: `href="/docs/"` becomes `href="/project/docs/"`. Without this
+/// the pages load with no stylesheet and every internal link 404s.
+pub fn prefix_root_paths(html: &str, prefix: &str) -> String {
+    if prefix.is_empty() {
+        return html.to_string();
+    }
+    let html = ROOT_ATTR.replace_all(html, |c: &regex::Captures| match under(prefix, &c[3]) {
+        Some(v) => format!("{}{}{v}", &c[1], &c[2]),
+        None => c[0].to_string(),
+    });
+    SRCSET
+        .replace_all(&html, |c: &regex::Captures| {
+            let list: Vec<String> = c[3]
+                .split(',')
+                .map(|part| {
+                    let part = part.trim();
+                    let (url, rest) = part.split_once(' ').unwrap_or((part, ""));
+                    let url = under(prefix, url).unwrap_or_else(|| url.to_string());
+                    if rest.is_empty() {
+                        url
+                    } else {
+                        format!("{url} {rest}")
+                    }
+                })
+                .collect();
+            format!("{}{}{}", &c[1], &c[2], list.join(", "))
+        })
+        .into_owned()
+}
+
+/// The same for `url(/…)` in a stylesheet, e.g. self-hosted fonts.
+pub fn prefix_css_paths(css: &str, prefix: &str) -> String {
+    if prefix.is_empty() {
+        return css.to_string();
+    }
+    CSS_URL
+        .replace_all(css, |c: &regex::Captures| match under(prefix, &c[2]) {
+            Some(v) => format!("url({}{v}", &c[1]),
+            None => c[0].to_string(),
+        })
+        .into_owned()
+}
+
+/// Apply [`prefix_css_paths`] to every stylesheet under `dir`.
+pub fn prefix_css_files(dir: &Path, prefix: &str) -> anyhow::Result<()> {
+    if prefix.is_empty() || !dir.is_dir() {
+        return Ok(());
+    }
+    for e in walkdir::WalkDir::new(dir).into_iter().flatten() {
+        if e.file_type().is_file() && e.path().extension().is_some_and(|x| x == "css") {
+            let css = std::fs::read_to_string(e.path())?;
+            let out = prefix_css_paths(&css, prefix);
+            if out != css {
+                std::fs::write(e.path(), out)?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Replace `/assets/css/main.css` with its fingerprinted name everywhere,
@@ -285,6 +377,29 @@ pub fn fingerprint_assets(out_dir: &Path) -> anyhow::Result<HashMap<String, Stri
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn sub_path_sites_keep_their_links() {
+        assert_eq!(
+            super::base_path("https://user.github.io/project/"),
+            "/project"
+        );
+        assert_eq!(super::base_path("https://example.com"), "");
+        assert_eq!(super::base_path("relative"), "");
+        let html = r#"<a href="/docs/">d</a><a href="/project/x/">x</a><a href="//cdn.example/a.js">c</a><a href="https://e.com/">e</a><img src="/a.png" srcset="/a.png 1x, /b.png 2x"><form action="/search/">"#;
+        assert_eq!(
+            super::prefix_root_paths(html, "/project"),
+            r#"<a href="/project/docs/">d</a><a href="/project/x/">x</a><a href="//cdn.example/a.js">c</a><a href="https://e.com/">e</a><img src="/project/a.png" srcset="/project/a.png 1x, /project/b.png 2x"><form action="/project/search/">"#
+        );
+        assert_eq!(super::prefix_root_paths(html, ""), html);
+        assert_eq!(
+            super::prefix_css_paths(
+                r#"src: url("/f.woff2") format("woff2"); background: url(/i.png); x: url(data:image/png;base64,AA)"#,
+                "/project"
+            ),
+            r#"src: url("/project/f.woff2") format("woff2"); background: url(/project/i.png); x: url(data:image/png;base64,AA)"#
+        );
+    }
+
     use super::*;
 
     #[test]

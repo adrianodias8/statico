@@ -215,8 +215,11 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
             {
                 continue;
             }
+            let base_path = crate::postprocess::base_path(&site_base);
             let href = if site_base != "relative" && href.starts_with(&site_base) {
                 &href[site_base.len()..]
+            } else if !base_path.is_empty() && href.starts_with(&format!("{base_path}/")) {
+                &href[base_path.len()..]
             } else {
                 href
             };

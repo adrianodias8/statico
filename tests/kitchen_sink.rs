@@ -457,6 +457,34 @@ fn render_errors_point_at_the_file_that_was_written() {
 }
 
 #[test]
+fn sub_path_builds_keep_links_inside_the_site() {
+    // A GitHub Pages project site lives at https://user.github.io/project.
+    let tmp = tempfile::tempdir().unwrap();
+    let out = tmp.path().join("site");
+    build(
+        &fixture(),
+        BuildOptions {
+            url: Some("https://user.github.io/project/".into()),
+            out: Some(out.clone()),
+            skip_tools: true,
+            minify: Some(false),
+            hash_assets: None,
+        },
+    )
+    .unwrap();
+    let index = read(&out, "index.html");
+    assert!(
+        index.contains(r#"href="/project/blog/second""#),
+        "root-relative links move under the sub-path"
+    );
+    assert!(!index.contains(r#"href="/blog/second""#));
+    assert!(
+        index.contains(r#"href="https://user.github.io/project/blog/""#),
+        "url() links stay absolute"
+    );
+}
+
+#[test]
 fn refuses_to_clean_the_project() {
     let err = build(
         &fixture(),
