@@ -268,7 +268,8 @@ fn run(cli: Cli) -> Result<i32> {
             let dir = match out {
                 Some(o) => o,
                 None => {
-                    let site = statico::site::Site::load(&cli.dir, statico::site::Mode::Build, None)?;
+                    let site =
+                        statico::site::Site::load(&cli.dir, statico::site::Mode::Build, None)?;
                     build::output_dir(&site, None)
                 }
             };

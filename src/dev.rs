@@ -77,8 +77,10 @@ pub fn dev(root: &Path, opts: DevOptions) -> Result<()> {
     let root = site.root.clone();
     let port = opts.port.or(site.config.dev.port).unwrap_or(3000);
 
-    let cache_dir =
-        std::env::temp_dir().join(format!("statico-dev-{:x}", hash(&root.display().to_string())));
+    let cache_dir = std::env::temp_dir().join(format!(
+        "statico-dev-{:x}",
+        hash(&root.display().to_string())
+    ));
     let _ = std::fs::remove_dir_all(&cache_dir);
     std::fs::create_dir_all(cache_dir.join("assets/js"))?;
 
@@ -514,7 +516,10 @@ pub fn watch_build(root: &Path, opts: impl Fn() -> crate::build::BuildOptions) -
 pub fn serve(dir: &Path, host: &str, port: u16, open_browser: bool) -> Result<()> {
     use tower_http::services::{ServeDir, ServeFile};
     if !dir.is_dir() {
-        anyhow::bail!("{} does not exist. Run `statico build` first.", dir.display());
+        anyhow::bail!(
+            "{} does not exist. Run `statico build` first.",
+            dir.display()
+        );
     }
     let svc = ServeDir::new(dir).not_found_service(ServeFile::new(dir.join("404.html")));
     let rt = tokio::runtime::Builder::new_multi_thread()
