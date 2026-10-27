@@ -20,7 +20,11 @@ pub struct Composer<'a> {
 
 impl Composer<'_> {
     fn rel(&self, p: &Path) -> String {
-        p.strip_prefix(self.root).unwrap_or(p).display().to_string()
+        p.strip_prefix(self.root)
+            .unwrap_or(p)
+            .display()
+            .to_string()
+            .replace('\\', "/")
     }
 
     fn read(&self, path: &Path, referenced_from: &str) -> Result<String> {
