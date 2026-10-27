@@ -1064,14 +1064,37 @@ pub fn parse_urls(html: &str, base: &str) -> String {
     if !html.contains("url(") {
         return html.to_string();
     }
-    URL.replace_all(html, |c: &regex::Captures| {
-        if base == "relative" {
-            c[1].to_string()
-        } else {
-            format!("{}{}", base, &c[1])
-        }
-    })
-    .into_owned()
+    let replace = |s: &str| {
+        URL.replace_all(s, |c: &regex::Captures| {
+            if base == "relative" {
+                c[1].to_string()
+            } else {
+                format!("{}{}", base, &c[1])
+            }
+        })
+        .into_owned()
+    };
+    // Code shows `{ url('…') }` as written: a page documenting the helper
+    // must not have its examples rewritten.
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some((start, close)) = ["<pre", "<code"]
+        .iter()
+        .filter_map(|t| {
+            rest.find(t)
+                .map(|i| (i, if *t == "<pre" { "</pre>" } else { "</code>" }))
+        })
+        .min_by_key(|(i, _)| *i)
+    {
+        out.push_str(&replace(&rest[..start]));
+        let end = rest[start..]
+            .find(close)
+            .map_or(rest.len(), |e| start + e + close.len());
+        out.push_str(&rest[start..end]);
+        rest = &rest[end..];
+    }
+    out.push_str(&replace(rest));
+    out
 }
 
 pub fn to_url_path(p: &Path) -> String {
@@ -1175,6 +1198,15 @@ pub fn insert_before(html: &str, needle: &str, insert: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn url_helper_leaves_code_alone() {
+        let html = "<a href=\"{ url('/a') }\">a</a> <code>{ url('/b') }</code> <pre><code>{ url('/c') }</code></pre> { url('/d') }";
+        assert_eq!(
+            parse_urls(html, "https://e.com"),
+            "<a href=\"https://e.com/a\">a</a> <code>{ url('/b') }</code> <pre><code>{ url('/c') }</code></pre> https://e.com/d"
+        );
+    }
 
     #[test]
     fn tailwind_only_when_the_css_asks_for_it() {
