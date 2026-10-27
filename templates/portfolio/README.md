@@ -1,8 +1,15 @@
 # Portfolio
 
-A freelancer's site, set as a Brussels shopfront: the name lettered in gilt on
-the fascia, the trade on the window, and the door as the way to book a call.
-Below it: services, career record, a project, and writing.
+A freelancer's site as a small operating system on a white-phosphor CRT:
+it boots with your logo, then opens on a desktop of volumes (services,
+experience, projects, writing, profile, contact, and a working terminal)
+that open as windows you can drag, stack and close. Booking a call is always
+in the menu bar.
+
+Without JavaScript, or with reduced motion, it stays fully usable: every
+window is an ordinary section of one readable page, and the boot screen is
+skipped. Visitors can switch the CRT effect and the (off by default) sound
+in the menu bar.
 
 ```bash
 statico dev       # preview at http://localhost:3000
@@ -15,16 +22,19 @@ statico build https://your-domain.example
 | File | What to change |
 |---|---|
 | `statico.json` | name, description, email, booking link, GitHub |
+| `includes/logo.html`, `includes/logo-mark.html` | your logo (inline SVG, drawn in `currentColor`) |
 | `collections/services.json` | what you offer |
 | `collections/experience.json` | where you've worked |
 | `collections/projects.json` | something you built |
-| `collections/menu.json` | navigation |
+| `collections/volumes.json` | the desktop's volumes and their file names |
+| `pages/index.html` | the boot log lines and the window contents |
 | `content/writing/*.md` | posts (title, description, date) |
 | `pages/about.html` | your bio |
-| `assets/images/` | your photos |
+| `assets/js/os.js` | the terminal's commands |
 
-The palette and type are tokens at the top of `assets/css/main.css`.
+The palette is a handful of tokens at the top of `assets/css/main.css`.
 
-This copy ships with Adriano Dias's real content as the example. Replace it all.
+This copy ships with Adriano Dias's real content and logo as the example.
+Replace them.
 
-Fonts: Bodoni Moda and Schibsted Grotesk, both SIL Open Font License (see `assets/fonts/`).
+Fonts: VT323 and Schibsted Grotesk, both SIL Open Font License (see `assets/fonts/`).

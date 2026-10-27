@@ -1,0 +1,16 @@
+<header class="menubar">
+    <a class="menubar__mark" href="/" aria-label="{site.name}, home"><include src="logo-mark.html" /></a>
+    <nav class="menubar__menu" aria-label="Main">
+        <a href="/#services" data-open="services">Services</a>
+        <a href="/#experience" data-open="experience">Experience</a>
+        <a href="/writing/">Writing</a>
+        <a href="/about/">About</a>
+    </nav>
+    <div class="menubar__right">
+        <button class="menubar__toggle" type="button" data-toggle="crt" aria-pressed="true">CRT</button>
+        <button class="menubar__toggle" type="button" data-toggle="sound" aria-pressed="false">Sound</button>
+        <p class="menubar__status"><span class="dot" aria-hidden="true"></span> Booking open</p>
+        <p class="menubar__clock">Brussels <time data-clock>--:--</time></p>
+        <a class="menubar__book" href="{site.booking}" target="_blank" rel="noopener">Book a call</a>
+    </div>
+</header>

@@ -1,21 +1,16 @@
-<layout src="page.html" title="{frontmatter.title} · {site.name}">
-
-<article class="post wrap">
-    <header class="post__header">
-        <a class="back" href="/writing/">Writing</a>
-        <h1>{frontmatter.title}</h1>
-        <p class="post__meta"><time datetime="{frontmatter.date}">{frontmatter.date|date:"%-d %B %Y"}</time> · {content|reading_time} min read</p>
-    </header>
-    <div class="prose">
-        {content}
-    </div>
-</article>
-
-<section class="exit" aria-labelledby="closing-title">
-    <div class="wrap exit__inner">
-    <h2 id="closing-title">Need a hand with your site?</h2>
-        <include src="door.html" />
-    </div>
-</section>
-
+<layout src="base.html" title="{frontmatter.title} · {site.name}">
+<main id="main" class="page">
+    <article class="window window--page window--reader" aria-labelledby="page-title">
+        <include src="window-bar.html" file="writing.txt" close="/writing/" />
+        <div class="window__body">
+            <h1 id="page-title">{frontmatter.title}</h1>
+            <p class="reader__meta"><time datetime="{frontmatter.date}">{frontmatter.date|date:"%-d %B %Y"}</time> · {content|reading_time} min read</p>
+            <div class="prose">
+                {content}
+            </div>
+            <h2 class="page-section">Need a hand with your site?</h2>
+            <include src="book.html" />
+        </div>
+    </article>
+</main>
 </layout>

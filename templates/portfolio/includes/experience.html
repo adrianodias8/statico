@@ -1,11 +1,11 @@
-<ol class="record">
+<ol class="log">
     <ForEach collection="experience" as="job">
-    <li class="record__row">
-        <p class="record__dates">{job.dates}</p>
+    <li class="log__row">
+        <p class="log__dates">{job.dates}</p>
         <div>
-            <h3 class="record__role">{job.role}</h3>
-            <p class="record__company">{job.company}</p>
-            <p class="record__about">{job.about}</p>
+            <h3>{job.role}</h3>
+            <p class="log__company">{job.company}</p>
+            <p class="log__about">{job.about}</p>
         </div>
     </li>
     </ForEach>

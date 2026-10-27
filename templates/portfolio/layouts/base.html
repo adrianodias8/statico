@@ -5,15 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{title}</title>
     {seo}
-    <meta name="theme-color" content="#1f4436">
+    <meta name="theme-color" content="#121312">
+    <link rel="preload" href="/assets/fonts/VT323-normal-400.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/assets/fonts/SchibstedGrotesk-normal-400-900.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="/assets/fonts/BodoniModa-normal-400-900.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <script src="/assets/js/os.js" defer></script>
 </head>
 <body>
     <a class="skip" href="#main">Skip to content</a>
+    <include src="menubar.html" />
     {slot}
-    <include src="footer.html" />
+    <div class="crt" aria-hidden="true"></div>
 </body>
 </html>

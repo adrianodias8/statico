@@ -1,35 +1,24 @@
-<layout src="page.html" title="About · {site.name}">
-
-<section class="page-intro wrap">
-    <h1>About me</h1>
-    <p class="lead">I'm a developer from Portugal, living in Brussels. I like building new products and learning new technology.</p>
-</section>
-
-<section class="about wrap">
-    <figure class="about__photo">
-        <img src="/assets/images/adriano-camera.jpg" alt="Adriano on a beach at dusk, hood up, a Minolta film camera around his neck" width="900" height="1200">
-    </figure>
-    <div class="prose">
-        <h2>Short bio</h2>
-        <p>My core expertise is PHP, especially Drupal and Laravel, and I'm just as interested in Linux, Docker and newer things like LLMs. Honestly, I like all things tech. Away from the code you'll usually find me taking photographs, or spending time with my girlfriend, who helps me with design and with life in general.</p>
-        <h2>Career</h2>
-        <p>I started in web development at 17, with an internship through my vocational high school, just as Drupal 7 was released. That sparked my interest in building for the web, and I've been at it ever since. For the past five years I've worked as a contractor at the European Commission, delivering web solutions that scale.</p>
-    </div>
-</section>
-
-<section class="section wrap" aria-labelledby="experience-title">
-    <div class="section__head">
-        <h2 id="experience-title">Experience</h2>
-    </div>
-    <include src="experience.html" />
-</section>
-
-<section class="exit" aria-labelledby="closing-title">
-    <div class="wrap exit__inner">
-    <h2 id="closing-title">Get in touch</h2>
-        <p>Send me an email and I'll get back to you, or book a call.</p>
-        <include src="door.html" />
-    </div>
-</section>
-
+<layout src="base.html" title="About · {site.name}" description="Adriano Dias: a developer from Portugal living in Brussels, working in Drupal, Laravel and static sites.">
+<main id="main" class="page">
+    <article class="window window--page" aria-labelledby="page-title">
+        <include src="window-bar.html" file="profile.sys" close="/" />
+        <div class="window__body">
+            <h1 id="page-title">About me</h1>
+            <p class="window__lead">I'm a developer from Portugal, living in Brussels. I like building new products and learning new technology.</p>
+            <div class="profile profile--page">
+                <img class="profile__photo" src="/assets/images/adriano-camera.jpg" alt="Adriano on a beach at dusk, hood up, a Minolta film camera around his neck" width="900" height="1200">
+                <div class="prose">
+                    <h2>Short bio</h2>
+                    <p>My core expertise is PHP, especially Drupal and Laravel, and I'm just as interested in Linux, Docker and newer things like LLMs. Honestly, I like all things tech. Away from the code you'll usually find me taking photographs, or spending time with my girlfriend, who helps me with design and with life in general.</p>
+                    <h2>Career</h2>
+                    <p>I started in web development at 17, with an internship through my vocational high school, just as Drupal 7 was released. That sparked my interest in building for the web, and I've been at it ever since. For the past five years I've worked as a contractor at the European Commission, delivering web solutions that scale.</p>
+                </div>
+            </div>
+            <h2 class="page-section">Experience</h2>
+            <include src="experience.html" />
+            <h2 class="page-section">Get in touch</h2>
+            <include src="book.html" />
+        </div>
+    </article>
+</main>
 </layout>
