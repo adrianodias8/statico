@@ -9,7 +9,7 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 use walkdir::WalkDir;
 
-use crate::config::{Config, load_env};
+use crate::config::{Config, PUBLIC_ENV_PREFIX, load_env, public_env};
 use crate::markdown;
 use crate::template::{self, DataSource, Scope, compose::Composer, filters};
 
@@ -91,7 +91,11 @@ pub struct Site {
     pub tailwind: Tailwind,
     /// Set by the build once main.css has been compiled.
     pub css_compiled: std::sync::atomic::AtomicBool,
+    /// The `PUBLIC_` subset of `.env`; the only part templates can read.
     env: Map<String, Value>,
+    /// Keys in `.env` that templates can't read, kept to explain a `{env.KEY}`
+    /// that stays unresolved.
+    private_env_keys: Vec<String>,
     /// Single-flight cache: parallel pages needing the same collection wait
     /// for one computation instead of all doing it.
     cache: Mutex<HashMap<String, CacheCell>>,
@@ -135,9 +139,16 @@ impl Site {
                 markdown::theme_names().join(", ")
             );
         }
+        let all_env = load_env(&root);
+        let private_env_keys = all_env
+            .keys()
+            .filter(|k| !k.starts_with(PUBLIC_ENV_PREFIX))
+            .cloned()
+            .collect();
         Ok(Site {
             tailwind: detect_tailwind(&root),
-            env: load_env(&root),
+            env: public_env(&all_env),
+            private_env_keys,
             root,
             config,
             mode,
@@ -462,6 +473,17 @@ impl Site {
             r = self.render_pass(source, url, page, Some(r.total_pages))?;
         }
         Ok(r)
+    }
+
+    /// Private `.env` keys that `html` still has as `{env.KEY}` placeholders.
+    pub fn private_env_refs<'a>(&'a self, html: &str) -> Vec<&'a str> {
+        self.private_env_keys
+            .iter()
+            .filter(|k| {
+                html.contains(&format!("{{env.{k}}}")) || html.contains(&format!("{{env.{k}|"))
+            })
+            .map(String::as_str)
+            .collect()
     }
 
     fn base_scope<'a>(&'a self, origin: &str, url: &str, source: &Path, page: usize) -> Scope<'a> {

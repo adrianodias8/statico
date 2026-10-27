@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use crate::build::{BuildError, BuildOptions, build};
+use crate::config::{PUBLIC_ENV_PREFIX, load_env};
 use crate::diag::Diagnostic;
 use crate::template::tags::find_tags;
 
@@ -161,7 +162,12 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
         }
         // Unresolved placeholders outside <script>.
         let visible = strip_scripts(&html);
-        for m in UNRESOLVED.find_iter(&visible).take(5) {
+        for m in UNRESOLVED
+            .find_iter(&visible)
+            // The build already reported private `.env` keys as S109.
+            .filter(|m| !is_private_env_ref(m.as_str()))
+            .take(5)
+        {
             warnings.push(issue(
                 "warning",
                 "S106",
@@ -273,6 +279,7 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
             });
         }
     }
+    errors.extend(leaked_env_values(root, &base));
     let _ = std::fs::remove_dir_all(&tmp);
     let ok = errors.is_empty() && (!strict || warnings.is_empty());
     Ok(CheckReport {
@@ -282,6 +289,60 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
         errors,
         warnings,
     })
+}
+
+/// Values shorter than this are too likely to occur by chance (`true`, `3000`,
+/// `en`) to be worth flagging.
+const MIN_SECRET_LEN: usize = 8;
+
+fn is_private_env_ref(placeholder: &str) -> bool {
+    placeholder
+        .strip_prefix("{env.")
+        .is_some_and(|k| !k.starts_with(PUBLIC_ENV_PREFIX))
+}
+
+/// One S108 error per output file that contains the value of a private `.env`
+/// key. Covers every text file, not only pages: feeds, `search.json`, `.md`
+/// mirrors and `llms-full.txt` all carry page text. The value itself is never
+/// printed.
+fn leaked_env_values(root: &Path, out: &Path) -> Vec<Diagnostic> {
+    let secrets: Vec<(String, String)> = load_env(root)
+        .into_iter()
+        .filter(|(k, _)| !k.starts_with(PUBLIC_ENV_PREFIX))
+        .filter_map(|(k, v)| Some((k, v.as_str()?.to_string())))
+        .filter(|(_, v)| v.chars().count() >= MIN_SECRET_LEN)
+        .collect();
+    if secrets.is_empty() {
+        return Vec::new();
+    }
+    let mut found = Vec::new();
+    for entry in walkdir::WalkDir::new(out)
+        .sort_by_file_name()
+        .into_iter()
+        .flatten()
+    {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let Ok(text) = std::fs::read_to_string(entry.path()) else {
+            continue;
+        };
+        let rel = entry.path().strip_prefix(out).unwrap_or(entry.path());
+        let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
+        for (key, value) in &secrets {
+            if text.contains(value.as_str()) {
+                found.push(Diagnostic {
+                    level: "error",
+                    file: None,
+                    line: None,
+                    url: Some(url.clone()),
+                    message: format!("the value of {key} from .env appears in {url}"),
+                    code: Some("S108"),
+                });
+            }
+        }
+    }
+    found
 }
 
 fn strip_scripts(html: &str) -> String {
@@ -335,5 +396,12 @@ mod tests {
     fn normalizes() {
         assert_eq!(super::normalize("/blog/../about/"), "/about/");
         assert_eq!(super::normalize("/a/./b"), "/a/b");
+    }
+
+    #[test]
+    fn private_env_refs() {
+        assert!(super::is_private_env_ref("{env.STRIPE_SECRET}"));
+        assert!(!super::is_private_env_ref("{env.PUBLIC_API_URL}"));
+        assert!(!super::is_private_env_ref("{site.title}"));
     }
 }

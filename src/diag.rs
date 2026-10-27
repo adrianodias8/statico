@@ -40,12 +40,20 @@ macro_rules! say {
 }
 
 pub fn warn(msg: impl Into<String>) {
-    let msg = msg.into();
+    push_warning(msg.into(), None);
+}
+
+/// [`warn`] with a stable code that `statico explain` can expand on.
+pub fn warn_code(code: &'static str, msg: impl Into<String>) {
+    push_warning(msg.into(), Some(code));
+}
+
+fn push_warning(msg: String, code: Option<&'static str>) {
     if !quiet() {
         eprintln!("warning: {msg}");
     }
     let mut d = parse(&msg, "warning");
-    d.code = None;
+    d.code = code;
     let mut w = WARNINGS.lock().unwrap();
     if !w.contains(&d) {
         w.push(d);

@@ -69,6 +69,10 @@ fn builds_every_feature() {
     );
     assert!(index.contains("<h1>hello from .env</h1>"), "env");
     assert!(
+        !index.contains("sk_test_kitchen_sink"),
+        "private .env keys never reach templates"
+    );
+    assert!(
         index.contains(r#"<a href="https://example.com/" class="active">Home</a>"#),
         "url() + page.url + If inside include loop"
     );
@@ -296,6 +300,56 @@ fn check_finds_broken_links_and_missing_alt() {
     let codes: Vec<_> = r.errors.iter().filter_map(|e| e.code).collect();
     assert_eq!(codes, vec!["S101", "S105"], "{:?}", r.errors);
     assert!(r.warnings.iter().any(|w| w.code == Some("S102")));
+}
+
+#[test]
+fn private_env_stays_out_of_the_output() {
+    const SECRET: &str = "sk_test_kitchen_sink_do_not_publish";
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("p");
+    copy(&fixture(), &root);
+    let page = root.join("pages/env.html");
+
+    // Asking for a private key renders nothing secret and says why, once.
+    std::fs::write(
+        &page,
+        "<layout src=\"base.html\" title=\"E\"><p>{env.API_SECRET}</p></layout>",
+    )
+    .unwrap();
+    let r = statico::check::check(&root, None, false).unwrap();
+    assert!(r.ok, "{:?}", r.errors);
+    let codes: Vec<_> = r.warnings.iter().filter_map(|w| w.code).collect();
+    assert!(codes.contains(&"S109"), "{:?}", r.warnings);
+    assert!(
+        !r.warnings
+            .iter()
+            .any(|w| w.code == Some("S106") && w.message.contains("env.")),
+        "reported as S109 only: {:?}",
+        r.warnings
+    );
+
+    // A secret copied into a page by hand fails the check wherever it lands,
+    // and the report never repeats the value.
+    std::fs::write(
+        &page,
+        format!("<layout src=\"base.html\" title=\"E\"><p>{SECRET}</p></layout>"),
+    )
+    .unwrap();
+    let r = statico::check::check(&root, None, false).unwrap();
+    assert!(!r.ok);
+    assert!(
+        r.errors.iter().all(|e| e.code == Some("S108")),
+        "{:?}",
+        r.errors
+    );
+    assert!(
+        r.errors
+            .iter()
+            .any(|e| e.url.as_deref() == Some("/env/index.html")),
+        "{:?}",
+        r.errors
+    );
+    assert!(r.errors.iter().all(|e| !e.message.contains(SECRET)));
 }
 
 #[test]

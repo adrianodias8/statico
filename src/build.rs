@@ -123,6 +123,16 @@ fn build_route(
     let mut page = 1;
     loop {
         let rendered = site.render(&r.source, &r.url, page)?;
+        for key in site.private_env_refs(&rendered.html) {
+            diag::warn_code(
+                "S109",
+                format!(
+                    "{}: {{env.{key}}} is not available to templates; only PUBLIC_ keys from .env are. \
+                     Rename it PUBLIC_{key} if its value is safe to publish",
+                    site.rel(r.source.path())
+                ),
+            );
+        }
         let (url, file) = if page == 1 {
             (r.url.clone(), r.out.clone())
         } else {

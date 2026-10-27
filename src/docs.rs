@@ -162,6 +162,16 @@ pub const CODES: &[Code] = &[
         fix: "Add it to your layout: <html lang=\"en\">. Screen readers and translators rely on it.",
     },
     Code {
+        code: "S108",
+        title: "The value of a private .env key appears in the build output.",
+        fix: "Something copied a secret into a page, feed or search index: a hard-coded value, a collection, or content pasted from .env. Remove it, and rotate the secret if the site was already deployed. Only keys starting with PUBLIC_ are meant to be published.",
+    },
+    Code {
+        code: "S109",
+        title: "A template reads a .env key that is not public.",
+        fix: "Templates only see .env keys that start with PUBLIC_, so `.env` can hold API keys safely. If the value is fine to publish, rename it: API_URL=… → PUBLIC_API_URL=… and use {env.PUBLIC_API_URL}.",
+    },
+    Code {
         code: "S201",
         title: "Front matter does not match the schema for its folder.",
         fix: "Compare the file with `schemas` in statico.json. Types: string, number, bool, date, list, url, any; a trailing ? makes a field optional.",

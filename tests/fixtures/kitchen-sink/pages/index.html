@@ -1,5 +1,5 @@
 <layout title="Home" src="base.html">
-<h1>{env.GREETING}</h1>
+<h1>{env.PUBLIC_GREETING}</h1>
 <ul class="team">
 <ForEach collection="team" as="m" orderBy="age, desc" where="m.age > 30">
   <li data-first="{$loop.first}">{loop}. {m.name} ({m.age})<ForEach collection="m.skills" as="s"> #{s}</ForEach><If condition="m.skills.length == 0"> (no skills listed)</If></li>

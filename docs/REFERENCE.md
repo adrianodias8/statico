@@ -15,7 +15,7 @@ content/      markdown        content/blog/hello.md → /blog/hello/
 assets/       css, js, images (css/main.css → Tailwind, js/main.js → esbuild)
 public/       copied to the site root as-is (favicon.ico, robots.txt, CNAME)
 statico.json    optional config (static.json also works)
-.env          optional, values available as {env.KEY}
+.env          optional; PUBLIC_ keys available as {env.PUBLIC_KEY}
 ```
 
 Output goes to `_site/`. Never edit `_site/` by hand; it is rebuilt from scratch.
@@ -96,7 +96,7 @@ includes (cycles are detected) and work in pages, layouts and markdown.
 | `{content}` | rendered markdown of the current page |
 | `{page.url}`, `{page.title}`, `{page.description}` | current page |
 | `{site.name}` | anything under `site` in statico.json |
-| `{env.KEY}` | from `.env` only — never your shell environment |
+| `{env.PUBLIC_KEY}` | `.env` keys starting with `PUBLIC_` — never other keys, never your shell environment |
 | `{collections.menu.json}` | a collection inlined as JSON |
 | `{ url('/path') }` | `/path`, or absolute when building with a URL |
 | `{seo}` | meta description, canonical, Open Graph, Twitter, JSON-LD, feed links |
@@ -265,6 +265,15 @@ or v4 (`@import "tailwindcss";`), detected automatically. Statico uses, in order
 `STATICO_TAILWIND`, `node_modules/.bin`, a `tailwindcss` binary on PATH, a cached
 standalone binary it downloads itself, then `npx`. JavaScript in
 `assets/js/main.js` is bundled with esbuild the same way. No Node.js is required.
+Downloaded binaries are checked against SHA-256 hashes pinned in Statico and
+discarded, never run, if they don't match.
+
+`.env`: like Vite and Astro, only keys that start with `PUBLIC_` reach
+templates, so the same file can hold API keys for other tools. A template that
+asks for any other key gets a warning (`S109`) and nothing is substituted.
+`statico check` also fails (`S108`) if the value of a non-`PUBLIC_` key
+(8 characters or longer) appears anywhere in the output: pages, feeds,
+`search.json`, `llms-full.txt` or `.md` mirrors.
 
 ## config
 
@@ -332,4 +341,6 @@ Statico is designed to be driven by AI coding agents through its CLI:
 | S105 | link to a missing `#anchor` (check) |
 | S106 | unresolved placeholder in output, e.g. a typo in `{frontmatter.titel}` (check) |
 | S107 | `<html>` without a `lang` attribute (check) |
+| S108 | the value of a private `.env` key appears in the output (check) |
+| S109 | a template reads a `.env` key without the `PUBLIC_` prefix |
 | S201 | front matter does not match its schema |

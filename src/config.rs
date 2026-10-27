@@ -112,12 +112,26 @@ impl Config {
     }
 }
 
-/// Variables from `.env`, exposed as `{env.KEY}`. The process environment is
-/// deliberately *not* exposed, so secrets in your shell never leak into HTML.
+/// Only `.env` keys with this prefix reach templates, as in Vite and Astro.
+pub const PUBLIC_ENV_PREFIX: &str = "PUBLIC_";
+
+/// Every variable in `.env`. Templates see only the [`public_env`] subset; the
+/// rest is kept so `statico check` can fail if one of its values leaks into
+/// the output. The process environment is never read, so secrets in your
+/// shell can't reach HTML either.
 pub fn load_env(root: &Path) -> Map<String, Value> {
     std::fs::read_to_string(root.join(".env"))
         .map(|s| parse_env(&s))
         .unwrap_or_default()
+}
+
+/// The `PUBLIC_` keys of `.env`, exposed as `{env.PUBLIC_KEY}`. `.env` is where
+/// people keep API keys, so anything without the prefix stays out of templates.
+pub fn public_env(all: &Map<String, Value>) -> Map<String, Value> {
+    all.iter()
+        .filter(|(k, _)| k.starts_with(PUBLIC_ENV_PREFIX))
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect()
 }
 
 /// Lenient `.env` parser: `KEY=value`, optional `export `, quotes, `#` comments.
@@ -180,5 +194,14 @@ mod tests {
         assert_eq!(m["C"], "s");
         assert_eq!(m["D"], "v");
         assert_eq!(m.len(), 4);
+    }
+
+    #[test]
+    fn only_public_keys_are_exposed() {
+        let all =
+            super::parse_env("PUBLIC_API_URL=https://api\nSTRIPE_SECRET=sk_live_x\npublic_lower=x");
+        let public = super::public_env(&all);
+        assert_eq!(public.len(), 1);
+        assert_eq!(public["PUBLIC_API_URL"], "https://api");
     }
 }
