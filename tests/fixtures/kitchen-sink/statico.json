@@ -1,5 +1,5 @@
 {
-    "site": { "name": "Kitchen Sink", "description": "Every Forno feature on one site", "author": "Ada", "language": "en" },
+    "site": { "name": "Kitchen Sink", "description": "Every Statico feature on one site", "author": "Ada", "language": "en" },
     "headers": { "X-Frame-Options": "DENY" },
     "schemas": { "blog": { "title": "string", "date": "date", "tags": "list?" } }
 }

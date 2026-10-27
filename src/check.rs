@@ -1,4 +1,4 @@
-//! `forno check`: build into a temporary folder, then verify the output.
+//! `statico check`: build into a temporary folder, then verify the output.
 //! The agent's (and CI's) definition of done: zero errors.
 
 use anyhow::Result;
@@ -132,7 +132,7 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
         match title.as_deref() {
             None | Some("") => warnings.push(issue(
                 "warning",
-                "F103",
+                "S103",
                 label,
                 "page has no <title>".into(),
             )),
@@ -144,7 +144,7 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
         if strict && !html.contains("name=\"description\"") {
             warnings.push(issue(
                 "warning",
-                "F104",
+                "S104",
                 label,
                 "page has no meta description".into(),
             ));
@@ -154,7 +154,7 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
         {
             warnings.push(issue(
                 "warning",
-                "F107",
+                "S107",
                 label,
                 "<html> has no lang attribute".into(),
             ));
@@ -164,7 +164,7 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
         for m in UNRESOLVED.find_iter(&visible).take(5) {
             warnings.push(issue(
                 "warning",
-                "F106",
+                "S106",
                 label,
                 format!("unresolved placeholder `{}`", m.as_str()),
             ));
@@ -177,7 +177,7 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
             if t.name == "img" && t.attr("alt").is_none() {
                 warnings.push(issue(
                     "warning",
-                    "F102",
+                    "S102",
                     label,
                     format!(
                         "<img src=\"{}\"> has no alt text",
@@ -237,7 +237,7 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
             match resolved {
                 None => errors.push(issue(
                     "error",
-                    "F101",
+                    "S101",
                     label,
                     format!("broken link: {href}"),
                 )),
@@ -248,7 +248,7 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
                     {
                         errors.push(issue(
                             "error",
-                            "F105",
+                            "S105",
                             label,
                             format!("missing anchor: {href}"),
                         ));
@@ -269,7 +269,7 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
                     urls.len(),
                     urls.join(", ")
                 ),
-                code: Some("F103"),
+                code: Some("S103"),
             });
         }
     }
@@ -319,7 +319,7 @@ fn normalize(path: &str) -> String {
 
 fn tempdir() -> Result<PathBuf> {
     let p = std::env::temp_dir().join(format!(
-        "forno-check-{}-{}",
+        "statico-check-{}-{}",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)?

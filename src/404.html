@@ -9,8 +9,8 @@
 @media (prefers-color-scheme:dark){:root{--bg:#17120f;--fg:#f4ece4;--muted:#a8978a}}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--fg);font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px}
 main{max-width:440px;text-align:center}
-.oven{width:84px;height:84px;margin:0 auto 20px;border-radius:42px 42px 14px 14px;background:var(--fg);position:relative}
-.oven:after{content:"";position:absolute;left:22px;right:22px;bottom:14px;height:26px;border-radius:13px 13px 4px 4px;background:var(--accent);box-shadow:0 0 22px var(--accent)}
+.mark{width:72px;height:88px;margin:0 auto 20px;border-radius:8px;background:var(--fg);position:relative}
+.mark:after{content:"";position:absolute;left:16px;right:16px;top:32px;height:6px;border-radius:3px;background:var(--accent);box-shadow:0 0 22px var(--accent)}
 h1{font-size:28px;margin:0 0 8px;letter-spacing:-.02em}p{margin:0 0 6px;color:var(--muted)}
 code{font:14px ui-monospace,monospace;background:rgba(127,127,127,.15);padding:2px 6px;border-radius:6px}
 a{color:var(--accent)}
@@ -18,8 +18,8 @@ a{color:var(--accent)}
 </head>
 <body>
 <main>
-<div class="oven" aria-hidden="true"></div>
-<h1>Nothing baked here yet</h1>
+<div class="mark" aria-hidden="true"></div>
+<h1>Nothing here yet</h1>
 <p>This page doesn't exist.</p>
 <p>Create <code>pages/404.html</code> to customise this page, or go <a href="/">home</a>.</p>
 </main>

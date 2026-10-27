@@ -1,4 +1,4 @@
-//! `forno docs` and `forno explain`: the reference ships inside the binary,
+//! `statico docs` and `statico explain`: the reference ships inside the binary,
 //! so humans and agents can read it offline and version-matched.
 
 pub const REFERENCE: &str = include_str!("../docs/REFERENCE.md");
@@ -31,7 +31,7 @@ pub fn topics() -> Vec<(&'static str, &'static str)> {
         .collect()
 }
 
-/// One-line summaries for `forno docs`.
+/// One-line summaries for `statico docs`.
 pub fn summary(topic: &str) -> &'static str {
     match topic {
         "project" => "folders and what goes where",
@@ -48,10 +48,10 @@ pub fn summary(topic: &str) -> &'static str {
         "taxonomies" => "tag and category pages",
         "feeds" => "Atom feeds",
         "seo" => "meta, Open Graph, Twitter, JSON-LD",
-        "build" => "what `forno build` produces; Tailwind and esbuild",
-        "config" => "forno.json",
+        "build" => "what `statico build` produces; Tailwind and esbuild",
+        "config" => "statico.json",
         "schemas" => "validate front matter",
-        "agents" => "using Forno from AI coding agents",
+        "agents" => "using Statico from AI coding agents",
         "errors" => "error codes",
         _ => "",
     }
@@ -69,7 +69,7 @@ pub fn topic(name: &str) -> Option<String> {
         "rss" | "atom" | "feed" => "feeds",
         "json" | "mcp" | "ai" | "llms" => "agents",
         "codes" | "error" => "errors",
-        "forno.json" | "static.json" => "config",
+        "statico.json" | "static.json" => "config",
         n => n,
     }
     .to_string();
@@ -87,84 +87,84 @@ pub struct Code {
 
 pub const CODES: &[Code] = &[
     Code {
-        code: "F001",
+        code: "S001",
         title: "A <ForEach> or <If> is not closed, or tags are mismatched.",
         fix: "Every <ForEach> needs </ForEach> and every <If> needs </If>. <ElseIf>/<Else> must sit directly inside an <If>. The error names the line where the unclosed tag opened.",
     },
     Code {
-        code: "F002",
+        code: "S002",
         title: "An include, layout or page file was not found.",
-        fix: "Paths are relative to includes/, layouts/ or pages/: <include src=\"nav.html\"> reads includes/nav.html. Check the spelling, or create it with `forno add include nav`.",
+        fix: "Paths are relative to includes/, layouts/ or pages/: <include src=\"nav.html\"> reads includes/nav.html. Check the spelling, or create it with `statico add include nav`.",
     },
     Code {
-        code: "F003",
+        code: "S003",
         title: "<layout> or <include> has no src attribute.",
         fix: "Add src, e.g. <layout src=\"main.html\" title=\"…\">.",
     },
     Code {
-        code: "F004",
+        code: "S004",
         title: "A condition or where expression could not be parsed.",
-        fix: "Use ==, !=, <, >, &&, ||, !, contains, parentheses and quoted strings: condition=\"post.tags contains 'rust' && loop > 1\". See `forno docs conditions`.",
+        fix: "Use ==, !=, <, >, &&, ||, !, contains, parentheses and quoted strings: condition=\"post.tags contains 'rust' && loop > 1\". See `statico docs conditions`.",
     },
     Code {
-        code: "F005",
+        code: "S005",
         title: "Front matter is not valid YAML.",
         fix: "Front matter sits between two --- lines at the very top. Quote values containing colons: title: \"Rust: a story\".",
     },
     Code {
-        code: "F006",
+        code: "S006",
         title: "A collection is missing or not valid data.",
         fix: "<ForEach collection=\"menu\"> reads collections/menu.json (or .yaml/.toml/.csv); content=\"posts\" reads content/posts/*.md. Validate the file's syntax.",
     },
     Code {
-        code: "F007",
+        code: "S007",
         title: "A markdown file has no page template.",
-        fix: "content/blog/x.md needs pages/blog/[content].html (or pages/blog/x.html / pages/blog/index.html). `forno add post blog \"Title\"` creates one if missing.",
+        fix: "content/blog/x.md needs pages/blog/[content].html (or pages/blog/x.html / pages/blog/index.html). `statico add post blog \"Title\"` creates one if missing.",
     },
     Code {
-        code: "F008",
+        code: "S008",
         title: "An include or layout includes itself (directly or indirectly).",
         fix: "Follow the chain printed in the error and break the cycle.",
     },
     Code {
-        code: "F101",
+        code: "S101",
         title: "A link points to a page or file that the build does not produce.",
-        fix: "Fix the href, create the page (`forno add page …`), or put the file in public/ or assets/. `forno routes` lists every URL.",
+        fix: "Fix the href, create the page (`statico add page …`), or put the file in public/ or assets/. `statico routes` lists every URL.",
     },
     Code {
-        code: "F102",
+        code: "S102",
         title: "An <img> has no alt attribute.",
         fix: "Describe the image: alt=\"Team photo at the 2024 offsite\". Use alt=\"\" only for purely decorative images.",
     },
     Code {
-        code: "F103",
+        code: "S103",
         title: "A page has no <title> (or an empty one).",
         fix: "Give the layout a <title>{title}</title> and pass title=\"…\" from the page's <layout> tag.",
     },
     Code {
-        code: "F104",
+        code: "S104",
         title: "A page has no meta description.",
-        fix: "Add {seo} to the layout <head> and a description in front matter, or `site.description` in forno.json.",
+        fix: "Add {seo} to the layout <head> and a description in front matter, or `site.description` in statico.json.",
     },
     Code {
-        code: "F105",
+        code: "S105",
         title: "A link points to an #anchor that does not exist on the target page.",
         fix: "Heading ids are generated GitHub-style: \"## Getting started\" → #getting-started. Check the id or use ## Title {#custom-id}.",
     },
     Code {
-        code: "F106",
+        code: "S106",
         title: "A placeholder was not replaced, usually a typo.",
         fix: "Check the variable name, e.g. {frontmatter.titel} → {frontmatter.title}. Placeholders only resolve where their data exists (frontmatter only on markdown pages).",
     },
     Code {
-        code: "F107",
+        code: "S107",
         title: "<html> has no lang attribute.",
         fix: "Add it to your layout: <html lang=\"en\">. Screen readers and translators rely on it.",
     },
     Code {
-        code: "F201",
+        code: "S201",
         title: "Front matter does not match the schema for its folder.",
-        fix: "Compare the file with `schemas` in forno.json. Types: string, number, bool, date, list, url, any; a trailing ? makes a field optional.",
+        fix: "Compare the file with `schemas` in statico.json. Types: string, number, bool, date, list, url, any; a trailing ? makes a field optional.",
     },
 ];
 
@@ -173,10 +173,10 @@ pub fn explain(code: &str) -> Option<&'static Code> {
     CODES.iter().find(|x| x.code == c)
 }
 
-/// JSON Schema for forno.json.
+/// JSON Schema for statico.json.
 pub const SCHEMA: &str = r##"{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "forno.json",
+  "title": "statico.json",
   "type": "object",
   "properties": {
     "$schema": { "type": "string" },
@@ -242,7 +242,7 @@ mod tests {
         assert!(t.len() > 10);
         assert!(topic("loops").unwrap().contains("paginate"));
         assert!(topic("foreach").is_some());
-        assert!(explain("f101").is_some());
+        assert!(explain("s101").is_some());
         // Every code in the reference table has an explanation.
         for line in REFERENCE
             .lines()

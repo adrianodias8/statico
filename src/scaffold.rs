@@ -1,4 +1,4 @@
-//! `forno init`, `forno add …` and `forno agents`: create files in the right
+//! `statico init`, `statico add …` and `statico agents`: create files in the right
 //! place with the right boilerplate (handy for humans, essential for agents).
 
 use anyhow::{Result, bail};
@@ -234,17 +234,17 @@ pub fn agents_md(root: &Path) -> String {
     format!(
         r#"# AGENTS.md
 
-This is a static website built with **Forno** (plain HTML + a few tags).
-Run `forno docs --all` for the complete, version-matched reference.
+This is a static website built with **Statico** (plain HTML + a few tags).
+Run `statico docs --all` for the complete, version-matched reference.
 
 ## Commands
 
-- `forno dev` — dev server with live reload on http://localhost:3000
-- `forno check --json` — build + verify links, anchors, alt text, titles. **Done means zero errors.**
-- `forno build` — production build into `_site/` (never edit `_site/` by hand)
-- `forno routes --json` — every URL and the file that renders it
-- `forno add page <path>` / `forno add post <folder> "<title>"` / `forno add include <name>`
-- `forno explain <code>` — explain an error code such as F101
+- `statico dev` — dev server with live reload on http://localhost:3000
+- `statico check --json` — build + verify links, anchors, alt text, titles. **Done means zero errors.**
+- `statico build` — production build into `_site/` (never edit `_site/` by hand)
+- `statico routes --json` — every URL and the file that renders it
+- `statico add page <path>` / `statico add post <folder> "<title>"` / `statico add include <name>`
+- `statico explain <code>` — explain an error code such as S101
 - Add `--json` to any command for machine-readable output; exit code 1 means errors.
 
 ## Where things live
@@ -256,7 +256,7 @@ Run `forno docs --all` for the complete, version-matched reference.
 - `collections/` — JSON/YAML/TOML/CSV data for `<ForEach collection="name">`
 - `assets/css/main.css` (Tailwind), `assets/js/main.js` (bundled), `assets/images/`
 - `public/` — copied to the site root as-is
-- `forno.json` — optional config (`forno schema` prints its JSON Schema)
+- `statico.json` — optional config (`statico schema` prints its JSON Schema)
 
 ## Template cheatsheet
 
@@ -273,7 +273,7 @@ Run `forno docs --all` for the complete, version-matched reference.
 - Use plain HTML and Tailwind classes; do not add a JavaScript framework or build tool.
 - Keep shared markup in `includes/` and `layouts/` instead of duplicating it.
 - Every `<img>` needs a meaningful `alt`.
-- After changing anything, run `forno check --json` and fix every error before finishing.
+- After changing anything, run `statico check --json` and fix every error before finishing.
 "#,
         layouts_list = if layouts.is_empty() {
             String::new()
@@ -296,13 +296,13 @@ pub fn write_agents(root: &Path) -> Result<Vec<String>> {
     write_if_missing(
         root,
         "CLAUDE.md",
-        "# CLAUDE.md\n\nSee @AGENTS.md for how this Forno site is organised and how to verify changes.\n",
+        "# CLAUDE.md\n\nSee @AGENTS.md for how this Statico site is organised and how to verify changes.\n",
         &mut created,
     )?;
     Ok(created)
 }
 
-/// `forno init`: a minimal project in an existing (usually empty) folder.
+/// `statico init`: a minimal project in an existing (usually empty) folder.
 pub fn init(root: &Path, name: Option<&str>) -> Result<Vec<String>> {
     if root.join("pages").exists() {
         bail!("{} already has a pages/ folder", root.display());
@@ -317,7 +317,7 @@ pub fn init(root: &Path, name: Option<&str>) -> Result<Vec<String>> {
     let mut created = Vec::new();
     let w = |rel: &str, c: &str, created: &mut Vec<String>| write_if_missing(root, rel, c, created);
     w(
-        "forno.json",
+        "statico.json",
         &format!(
             "{{\n    \"site\": {{\n        \"name\": {},\n        \"description\": \"\",\n        \"language\": \"en\"\n    }}\n}}\n",
             serde_json::to_string(&site_name)?
@@ -332,7 +332,7 @@ pub fn init(root: &Path, name: Option<&str>) -> Result<Vec<String>> {
     )?;
     w(
         "pages/index.html",
-        "<layout src=\"main.html\" title=\"{site.name}\">\n\n    <include src=\"header.html\" />\n\n    <main class=\"mx-auto max-w-3xl px-6 py-16\">\n        <h1 class=\"text-4xl font-bold tracking-tight\">Hello from Forno 🔥</h1>\n        <p class=\"mt-4 text-lg text-neutral-600\">Edit <code>pages/index.html</code> and save — the page reloads.</p>\n    </main>\n\n</layout>\n",
+        "<layout src=\"main.html\" title=\"{site.name}\">\n\n    <include src=\"header.html\" />\n\n    <main class=\"mx-auto max-w-3xl px-6 py-16\">\n        <h1 class=\"text-4xl font-bold tracking-tight\">Hello from Statico ⚡</h1>\n        <p class=\"mt-4 text-lg text-neutral-600\">Edit <code>pages/index.html</code> and save — the page reloads.</p>\n    </main>\n\n</layout>\n",
         &mut created,
     )?;
     w(
@@ -383,6 +383,6 @@ mod tests {
         let page = std::fs::read_to_string(root.join("pages/about/team.html")).unwrap();
         assert!(page.contains("<layout src=\"main.html\" title=\"Our team\">"));
         let agents = std::fs::read_to_string(root.join("AGENTS.md")).unwrap();
-        assert!(agents.contains("forno check --json") && agents.contains("main.html"));
+        assert!(agents.contains("statico check --json") && agents.contains("main.html"));
     }
 }

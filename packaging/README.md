@@ -2,16 +2,19 @@
 
 Release flow: push a tag `vX.Y.Z` → `.github/workflows/ci.yml` builds static
 binaries for Linux (musl, x64/arm64), macOS (x64/arm64) and Windows, and
-attaches them to the GitHub release as `forno-<target>.tar.gz|zip`.
+attaches them to the GitHub release as `statico-<target>.tar.gz|zip`.
 
-Before the first release, replace `OWNER/forno` with the real repository in:
+The release repository is `adrianodias8/statico`, hard-coded in `install.sh`
+(curl | sh installer) and `npm/install.js`; both honour `STATICO_REPO` as an
+override. `homebrew/statico.rb` still needs the `sha256` values filled in from
+the release artifacts, and a tap to live in (e.g. `adrianodias8/homebrew-tap`).
 
-- `install.sh` (curl | sh installer) — or set `FORNO_REPO`
-- `npm/install.js` — or set `FORNO_REPO`; publish with `cd npm && npm publish`
-  (the unscoped `forno` name was free on npm in Oct 2026)
-- `homebrew/forno.rb` — also fill in the `sha256` values from the release
+## Names (checked Oct 2026)
 
-crates.io: the crate name `forno` is taken (an empty placeholder), so the
-package is published as **`forno-cli`** (`cargo install forno-cli`); the
-binary and library are still called `forno`. Consider asking the owner of the
-`forno` crate to transfer it.
+- **crates.io:** `statico` is taken (an unrelated crate), so the package is
+  published as **`statico-cli`** (`cargo install statico-cli`). The binary and
+  library are still called `statico`.
+- **npm:** unscoped `statico` is taken too (a 2016 package), so the wrapper is
+  published as **`statico-cli`** (`npm i -g statico-cli`), installing a
+  `statico` binary. Publish with `cd npm && npm publish`.
+- **Homebrew:** free; the formula installs the binary as `statico`.

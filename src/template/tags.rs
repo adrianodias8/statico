@@ -1,4 +1,4 @@
-//! A small, quote-aware scanner for the handful of custom tags Forno understands
+//! A small, quote-aware scanner for the handful of custom tags Statico understands
 //! (`<layout>`, `<include>`, `<page>`, `<ForEach>`, `<If>`, `<ElseIf>`, `<Else>`).
 //!
 //! Unlike the regexes in the original JavaScript implementation, this scanner

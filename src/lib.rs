@@ -1,4 +1,4 @@
-//! Forno — a fast, single-binary static site generator. Builds plain HTML
+//! Statico — a fast, single-binary static site generator. Builds plain HTML
 //! projects (and projects made for DevDojo's Static) into static sites.
 
 pub mod assets;

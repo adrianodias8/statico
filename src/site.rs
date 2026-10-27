@@ -1,5 +1,5 @@
-//! A Forno project on disk: routing, data loading and page rendering.
-//! Shared by `forno dev` (render on request) and `forno build`.
+//! A Statico project on disk: routing, data loading and page rendering.
+//! Shared by `statico dev` (render on request) and `statico build`.
 
 use anyhow::{Context, Result, bail};
 use regex::Regex;
@@ -106,7 +106,7 @@ impl Site {
             .with_context(|| format!("cannot open project at {}", root.display()))?;
         if !root.join("pages").is_dir() {
             bail!(
-                "no `pages` directory in {}\n  Run this inside a Forno project, or create one with `forno new my-site` (or `forno init`).",
+                "no `pages` directory in {}\n  Run this inside a Statico project, or create one with `statico new my-site` (or `statico init`).",
                 root.display()
             );
         }
@@ -131,7 +131,7 @@ impl Site {
             && !markdown::theme_names().contains(t)
         {
             bail!(
-                "unknown code highlighting theme `{t}` in forno.json. Available: {}",
+                "unknown code highlighting theme `{t}` in statico.json. Available: {}",
                 markdown::theme_names().join(", ")
             );
         }
@@ -244,7 +244,7 @@ impl Site {
                     .with_extension(""),
             );
             let (url, out) = route_for(&rel);
-            // Content wins over a page with the same URL (as in `forno dev`).
+            // Content wins over a page with the same URL (as in `statico dev`).
             if let Some(existing) = routes.iter().position(|r| r.url == url) {
                 crate::diag::warn(format!(
                     "{}: maps to {url} like {}; using the markdown file",
@@ -622,7 +622,7 @@ impl Site {
         Ok(())
     }
 
-    /// Validate front matter against `schemas` in forno.json.
+    /// Validate front matter against `schemas` in statico.json.
     pub fn check_schema(&self, md: &Path, fm: &Map<String, Value>) -> Result<()> {
         let Ok(rel) = md.strip_prefix(self.root.join("content")) else {
             return Ok(());
@@ -670,7 +670,7 @@ impl Site {
         }
         if !problems.is_empty() {
             bail!(
-                "{}: front matter does not match the `{folder}` schema in forno.json: {} [F201]",
+                "{}: front matter does not match the `{folder}` schema in statico.json: {} [S201]",
                 self.rel(md),
                 problems.join("; ")
             );

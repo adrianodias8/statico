@@ -1,5 +1,5 @@
 //! `{seo}`: description, canonical, Open Graph, Twitter, feeds and JSON-LD,
-//! derived from front matter and `site` in forno.json.
+//! derived from front matter and `site` in statico.json.
 
 use serde_json::{Value, json};
 

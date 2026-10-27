@@ -16,7 +16,7 @@ pub struct Diagnostic {
     pub file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub line: Option<usize>,
-    /// The page URL, for problems found in built output (`forno check`).
+    /// The page URL, for problems found in built output (`statico check`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
     pub message: String,
@@ -56,30 +56,30 @@ pub fn take_warnings() -> Vec<Diagnostic> {
     std::mem::take(&mut *WARNINGS.lock().unwrap())
 }
 
-/// Stable error codes (see `forno explain <code>`), inferred from messages.
+/// Stable error codes (see `statico explain <code>`), inferred from messages.
 pub fn code_for(msg: &str) -> Option<&'static str> {
     let m = msg;
-    Some(if m.contains("[F201]") {
-        "F201"
+    Some(if m.contains("[S201]") {
+        "S201"
     } else if m.contains("is never closed")
         || m.contains("with no matching opening tag")
         || m.contains("is still open")
         || m.contains("must be inside an <If>")
         || m.contains("after <Else>")
     {
-        "F001"
+        "S001"
     } else if m.contains("include cycle") || m.contains("nest too deeply") {
-        "F008"
+        "S008"
     } else if m.contains("cannot read `")
         && (m.contains("includes/") || m.contains("layouts/") || m.contains("pages/"))
     {
-        "F002"
+        "S002"
     } else if m.contains("must include a src") || m.contains("must have a src") {
-        "F003"
+        "S003"
     } else if m.contains("invalid condition") || m.contains("invalid where=") {
-        "F004"
+        "S004"
     } else if m.contains("front matter") {
-        "F005"
+        "S005"
     } else if m.contains("no collection")
         || m.contains("cannot read collection")
         || m.contains("is not valid JSON")
@@ -88,9 +88,9 @@ pub fn code_for(msg: &str) -> Option<&'static str> {
         || m.contains("is not valid CSV")
         || m.contains("content folder")
     {
-        "F006"
+        "S006"
     } else if m.contains("no page template found") {
-        "F007"
+        "S007"
     } else {
         return None;
     })
@@ -100,7 +100,7 @@ pub fn code_for(msg: &str) -> Option<&'static str> {
 pub fn parse(msg: &str, level: &'static str) -> Diagnostic {
     let mut d = parse_loc(msg, level);
     d.code = code_for(msg);
-    d.message = d.message.replace(" [F201]", "");
+    d.message = d.message.replace(" [S201]", "");
     d
 }
 

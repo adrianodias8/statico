@@ -1,4 +1,4 @@
-//! `forno new <folder> [--template <name|owner/repo|url>]`
+//! `statico new <folder> [--template <name|owner/repo|url>]`
 
 use anyhow::{Context, Result, bail};
 use std::io::{Cursor, Read};
@@ -175,7 +175,7 @@ pub fn new_project(folder: &str, template: &str, install: bool) -> Result<PathBu
     };
     if !dest.join("pages").is_dir() {
         eprintln!(
-            "warning: the template has no `pages` folder; is it a Forno (or Static) template?"
+            "warning: the template has no `pages` folder; is it a Statico (or Static) template?"
         );
     }
     println!("Created {folder} ({n} files)");
@@ -195,7 +195,7 @@ pub fn new_project(folder: &str, template: &str, install: bool) -> Result<PathBu
             eprintln!("warning: `npm install` failed; run it yourself inside {folder}");
         }
     }
-    println!("\nNext steps:\n  cd {folder}\n  forno dev\n");
+    println!("\nNext steps:\n  cd {folder}\n  statico dev\n");
     Ok(dest)
 }
 

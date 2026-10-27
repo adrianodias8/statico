@@ -1,7 +1,7 @@
 //! End-to-end: build the kitchen-sink fixture and check every feature.
 
-use forno::build::{BuildOptions, build};
-use forno::site::{Mode, Site};
+use statico::build::{BuildOptions, build};
+use statico::site::{Mode, Site};
 use std::path::{Path, PathBuf};
 
 fn fixture() -> PathBuf {
@@ -207,7 +207,7 @@ fn builds_every_feature() {
     assert!(!sitemap.contains("404"));
     let llms = read(&out, "llms.txt");
     assert!(
-        llms.starts_with("# Kitchen Sink\n\n> Every Forno feature on one site\n"),
+        llms.starts_with("# Kitchen Sink\n\n> Every Statico feature on one site\n"),
         "{llms}"
     );
     assert!(
@@ -266,10 +266,10 @@ fn schema_violations_fail_the_build() {
     .err()
     .unwrap();
     let be = err
-        .downcast_ref::<forno::build::BuildError>()
+        .downcast_ref::<statico::build::BuildError>()
         .expect("structured errors");
     let e = &be.errors[0];
-    assert_eq!(e.code, Some("F201"));
+    assert_eq!(e.code, Some("S201"));
     assert_eq!(e.file.as_deref(), Some("content/blog/bad.md"));
     assert!(
         e.message.contains("`title` must be a string")
@@ -284,18 +284,18 @@ fn check_finds_broken_links_and_missing_alt() {
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().join("p");
     copy(&fixture(), &root);
-    let ok = forno::check::check(&root, None, false).unwrap();
+    let ok = statico::check::check(&root, None, false).unwrap();
     assert!(ok.ok, "fixture should be clean: {:?}", ok.errors);
     std::fs::write(
         root.join("pages/broken.html"),
         "<layout src=\"base.html\" title=\"B\"><a href=\"/nope/\">x</a><a href=\"/blog/first/#missing\">y</a><a href=\"/blog/first/#getting-started\">z</a><img src=\"/assets/images/x.png\"></layout>",
     )
     .unwrap();
-    let r = forno::check::check(&root, None, false).unwrap();
+    let r = statico::check::check(&root, None, false).unwrap();
     assert!(!r.ok);
     let codes: Vec<_> = r.errors.iter().filter_map(|e| e.code).collect();
-    assert_eq!(codes, vec!["F101", "F105"], "{:?}", r.errors);
-    assert!(r.warnings.iter().any(|w| w.code == Some("F102")));
+    assert_eq!(codes, vec!["S101", "S105"], "{:?}", r.errors);
+    assert!(r.warnings.iter().any(|w| w.code == Some("S102")));
 }
 
 #[test]

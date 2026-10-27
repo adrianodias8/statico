@@ -1,8 +1,8 @@
 //! Asset pipeline: copy `public/` and `assets/`, compile Tailwind, bundle JS.
 //!
-//! Forno itself is a single binary with no Node.js requirement. Tailwind and
+//! Statico itself is a single binary with no Node.js requirement. Tailwind and
 //! esbuild are external tools; we look for them in this order:
-//!   1. an explicit override (`FORNO_TAILWIND` / `FORNO_ESBUILD` env vars),
+//!   1. an explicit override (`STATICO_TAILWIND` / `STATICO_ESBUILD` env vars),
 //!   2. the project's `node_modules/.bin`,
 //!   3. a standalone binary on `PATH`,
 //!   4. `npx --yes <package>`.
@@ -91,7 +91,7 @@ fn package_major(root: &Path, pkg: &str) -> Option<u64> {
 }
 
 pub fn find_tailwind(root: &Path, kind: Tailwind) -> Option<Tool> {
-    if let Some(t) = from_env("FORNO_TAILWIND") {
+    if let Some(t) = from_env("STATICO_TAILWIND") {
         return Some(t);
     }
     match kind {
@@ -141,7 +141,7 @@ fn npx_tailwind(kind: Tailwind) -> Option<Tool> {
 }
 
 pub fn find_esbuild(root: &Path) -> Option<Tool> {
-    if let Some(t) = from_env("FORNO_ESBUILD") {
+    if let Some(t) = from_env("STATICO_ESBUILD") {
         return Some(t);
     }
     if let Some(p) = local_bin(root, "esbuild") {
@@ -184,7 +184,7 @@ pub fn build_css(site: &Site, out_dir: &Path) -> Result<bool> {
     }
     let Some(tool) = find_tailwind(&site.root, site.tailwind) else {
         crate::diag::warn(
-            "no Tailwind compiler available (offline, or unsupported platform); pages use the in-browser Tailwind build instead. Put `tailwindcss` on PATH or set FORNO_TAILWIND.",
+            "no Tailwind compiler available (offline, or unsupported platform); pages use the in-browser Tailwind build instead. Put `tailwindcss` on PATH or set STATICO_TAILWIND.",
         );
         return Ok(false);
     };

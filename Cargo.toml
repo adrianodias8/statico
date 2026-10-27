@@ -1,6 +1,6 @@
 [package]
-name = "forno-cli"
-description = "Forno — bake plain HTML into fast static sites. A single-binary static site generator."
+name = "statico-cli"
+description = "Statico — plain HTML into fast static sites. A single-binary static site generator."
 license = "ISC"
 version = "0.1.0"
 edition = "2024"
@@ -41,9 +41,9 @@ codegen-units = 1
 strip = true
 
 [lib]
-name = "forno"
+name = "statico"
 path = "src/lib.rs"
 
 [[bin]]
-name = "forno"
+name = "statico"
 path = "src/main.rs"

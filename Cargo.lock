@@ -462,38 +462,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "forno-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "chrono",
- "clap",
- "csv",
- "flate2",
- "imagesize",
- "mime_guess",
- "notify",
- "open",
- "pulldown-cmark",
- "rayon",
- "regex",
- "serde",
- "serde_json",
- "serde_yaml",
- "syntect",
- "tar",
- "tempfile",
- "tokio",
- "tokio-stream",
- "toml",
- "tower-http",
- "ureq",
- "walkdir",
- "zip",
-]
-
-[[package]]
 name = "futures-core"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1425,6 +1393,38 @@ checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "statico-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "clap",
+ "csv",
+ "flate2",
+ "imagesize",
+ "mime_guess",
+ "notify",
+ "open",
+ "pulldown-cmark",
+ "rayon",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "syntect",
+ "tar",
+ "tempfile",
+ "tokio",
+ "tokio-stream",
+ "toml",
+ "tower-http",
+ "ureq",
+ "walkdir",
+ "zip",
 ]
 
 [[package]]

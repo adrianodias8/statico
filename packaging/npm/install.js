@@ -1,12 +1,12 @@
-// Downloads the native forno binary for this platform from GitHub releases.
-// Set FORNO_REPO (owner/name) to the repository that publishes releases.
+// Downloads the native statico binary for this platform from GitHub releases.
+// Set STATICO_REPO (owner/name) to the repository that publishes releases.
 const { execFileSync } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
 const pkg = require("./package.json");
-const repo = process.env.FORNO_REPO || "OWNER/forno";
+const repo = process.env.STATICO_REPO || "adrianodias8/statico";
 const targets = {
   "linux-x64": "x86_64-unknown-linux-musl",
   "linux-arm64": "aarch64-unknown-linux-musl",
@@ -16,15 +16,15 @@ const targets = {
 };
 const target = targets[`${process.platform}-${process.arch}`];
 if (!target) {
-  console.error(`forno: unsupported platform ${process.platform}-${process.arch}; try \`cargo install forno-cli\``);
+  console.error(`statico: unsupported platform ${process.platform}-${process.arch}; try \`cargo install statico-cli\``);
   process.exit(1);
 }
 const win = process.platform === "win32";
 const ext = win ? "zip" : "tar.gz";
-const url = `https://github.com/${repo}/releases/download/v${pkg.version}/forno-${target}.${ext}`;
+const url = `https://github.com/${repo}/releases/download/v${pkg.version}/statico-${target}.${ext}`;
 const dir = path.join(__dirname, "native");
 fs.mkdirSync(dir, { recursive: true });
-const archive = path.join(os.tmpdir(), `forno-${process.pid}.${ext}`);
+const archive = path.join(os.tmpdir(), `statico-${process.pid}.${ext}`);
 
 async function main() {
   const res = await fetch(url);
@@ -34,11 +34,11 @@ async function main() {
     execFileSync("powershell", ["-NoProfile", "-Command", `Expand-Archive -Force '${archive}' '${dir}'`]);
   } else {
     execFileSync("tar", ["xzf", archive, "-C", dir]);
-    fs.chmodSync(path.join(dir, "forno"), 0o755);
+    fs.chmodSync(path.join(dir, "statico"), 0o755);
   }
   fs.unlinkSync(archive);
 }
 main().catch((e) => {
-  console.error(`forno: ${e.message}`);
+  console.error(`statico: ${e.message}`);
   process.exit(1);
 });

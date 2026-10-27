@@ -1,6 +1,6 @@
-# Forno reference
+# Statico reference
 
-Forno bakes plain HTML into static sites. Everything is HTML files in a few
+Statico turns plain HTML into static sites. Everything is HTML files in a few
 folders; there is no build config to write and no template language to learn
 beyond a handful of tags.
 
@@ -14,7 +14,7 @@ collections/  data files      menu.json | .yaml | .toml | .csv
 content/      markdown        content/blog/hello.md → /blog/hello/
 assets/       css, js, images (css/main.css → Tailwind, js/main.js → esbuild)
 public/       copied to the site root as-is (favicon.ico, robots.txt, CNAME)
-forno.json    optional config (static.json also works)
+statico.json    optional config (static.json also works)
 .env          optional, values available as {env.KEY}
 ```
 
@@ -28,20 +28,20 @@ Special pages:
 ## cli
 
 ```
-forno new <folder> [--template starter|blog|aria|boxed|stone|owner/repo|./dir|file.zip]
-forno init                     turn the current folder into a Forno project
-forno dev [--port 3000] [--open]
-forno build [url] [--out dir] [--no-minify] [--skip-tools]
-forno serve                    preview the built site like a static host
-forno check [--strict]         build in a temp dir and check links, anchors, alt text, titles
-forno add page|post|include|layout|collection <name> [--title …]
-forno routes                   list every URL and the file that renders it
-forno docs [topic|--all]       this reference, offline
-forno explain <code>           explain an error code, e.g. F101
-forno diff <old_dir> <new_dir> compare two builds (safe upgrades)
-forno schema                   JSON Schema for forno.json
-forno agents                   write AGENTS.md / CLAUDE.md for AI coding agents
-forno templates                list starter templates
+statico new <folder> [--template starter|blog|aria|boxed|stone|owner/repo|./dir|file.zip]
+statico init                     turn the current folder into a Statico project
+statico dev [--port 3000] [--open]
+statico build [url] [--out dir] [--no-minify] [--skip-tools]
+statico serve                    preview the built site like a static host
+statico check [--strict]         build in a temp dir and check links, anchors, alt text, titles
+statico add page|post|include|layout|collection <name> [--title …]
+statico routes                   list every URL and the file that renders it
+statico docs [topic|--all]       this reference, offline
+statico explain <code>           explain an error code, e.g. S101
+statico diff <old_dir> <new_dir> compare two builds (safe upgrades)
+statico schema                   JSON Schema for statico.json
+statico agents                   write AGENTS.md / CLAUDE.md for AI coding agents
+statico templates                list starter templates
 ```
 
 Global flags: `--json` (one machine-readable JSON object on stdout),
@@ -95,7 +95,7 @@ includes (cycles are detected) and work in pages, layouts and markdown.
 | `{frontmatter.title}` | front matter of the current markdown page |
 | `{content}` | rendered markdown of the current page |
 | `{page.url}`, `{page.title}`, `{page.description}` | current page |
-| `{site.name}` | anything under `site` in forno.json |
+| `{site.name}` | anything under `site` in statico.json |
 | `{env.KEY}` | from `.env` only — never your shell environment |
 | `{collections.menu.json}` | a collection inlined as JSON |
 | `{ url('/path') }` | `/path`, or absolute when building with a URL |
@@ -175,7 +175,7 @@ title: Hello
 date: 2024-05-01
 description: Short summary used by SEO, feeds and llms.txt
 tags: [rust, web]
-draft: true        # visible in `forno dev`, excluded from `forno build`
+draft: true        # visible in `statico dev`, excluded from `statico build`
 ---
 [toc]
 
@@ -210,7 +210,7 @@ Page {pagination.current} of {pagination.total}
 
 ## taxonomies
 
-Create `pages/tags/[tag].html`; Forno writes one page per distinct value of the
+Create `pages/tags/[tag].html`; Statico writes one page per distinct value of the
 `tags` (or `tag`) front matter field, at `/tags/<slug>/`:
 
 ```html
@@ -225,7 +225,7 @@ List all terms anywhere with `<ForEach collection="taxonomy/tags" as="t">`.
 
 ## feeds
 
-When the site has a URL (`forno build https://example.com` or `build.url`),
+When the site has a URL (`statico build https://example.com` or `build.url`),
 every top-level content folder whose posts have a `date` gets an Atom feed at
 `/<folder>/feed.xml` (full content, newest 20). `{seo}` adds the
 `<link rel="alternate">`. Configure or disable:
@@ -236,7 +236,7 @@ every top-level content folder whose posts have a `date` gets an Atom feed at
 ```
 
 Configured feeds are always written; without a URL their links are relative
-(Forno warns, since most feed readers need absolute links).
+(Statico warns, since most feed readers need absolute links).
 
 ## seo
 
@@ -245,12 +245,12 @@ URL, Open Graph and Twitter tags, `article:published_time`, feed links and
 JSON-LD (`BlogPosting` for dated content, `WebSite` on the home page).
 
 Sources: front matter `title`, `description`/`excerpt`, `image`/`ogImage`/
-`coverImage`, `author`, `date`; fallbacks from `site` in forno.json:
+`coverImage`, `author`, `date`; fallbacks from `site` in statico.json:
 `name`, `description`, `image`, `author`, `language`, `twitter`.
 
 ## build
 
-`forno build` writes `_site/`:
+`statico build` writes `_site/`:
 - pages rendered in parallel, HTML minified, CSS/JS fingerprinted
   (`main.3f2a91c0.css`) with references rewritten
 - local `<img>` get `width`/`height` (no layout shift), `loading="lazy"` and
@@ -261,14 +261,14 @@ Sources: front matter `title`, `description`/`excerpt`, `image`/`ogImage`/
 - `search.json` when `build.search` is `true`, or a Pagefind index with `"pagefind"`
 
 Tailwind: `assets/css/main.css` is compiled with Tailwind v3 (`@tailwind base;`)
-or v4 (`@import "tailwindcss";`), detected automatically. Forno uses, in order,
-`FORNO_TAILWIND`, `node_modules/.bin`, a `tailwindcss` binary on PATH, a cached
+or v4 (`@import "tailwindcss";`), detected automatically. Statico uses, in order,
+`STATICO_TAILWIND`, `node_modules/.bin`, a `tailwindcss` binary on PATH, a cached
 standalone binary it downloads itself, then `npx`. JavaScript in
 `assets/js/main.js` is bundled with esbuild the same way. No Node.js is required.
 
 ## config
 
-`forno.json` (all keys optional; run `forno schema` for the JSON Schema):
+`statico.json` (all keys optional; run `statico schema` for the JSON Schema):
 
 ```json
 {
@@ -299,37 +299,37 @@ Validate front matter per content folder. Types: `string`, `number`, `bool`,
 { "schemas": { "posts": { "title": "string", "date": "date", "tags": "list?" } } }
 ```
 
-A mismatch fails the build with error `F201`, naming the file and field.
+A mismatch fails the build with error `S201`, naming the file and field.
 
 ## agents
 
-Forno is designed to be driven by AI coding agents through its CLI:
+Statico is designed to be driven by AI coding agents through its CLI:
 
 - `--json` on every command returns one JSON object; errors have `code`, `file`, `line`, `message`.
-- `forno check --json` is the definition of done: zero errors.
-- `forno routes --json` maps URLs to source files.
-- `forno add …` creates files in the right place with the right boilerplate.
-- `forno docs --all` prints this whole reference; `forno explain F101` explains an error.
-- `forno agents` writes an `AGENTS.md` (and `CLAUDE.md`) describing the project conventions.
+- `statico check --json` is the definition of done: zero errors.
+- `statico routes --json` maps URLs to source files.
+- `statico add …` creates files in the right place with the right boilerplate.
+- `statico docs --all` prints this whole reference; `statico explain S101` explains an error.
+- `statico agents` writes an `AGENTS.md` (and `CLAUDE.md`) describing the project conventions.
 - The dev server answers `Accept: text/markdown` and `/<page>.md` with markdown.
 
 ## errors
 
 | Code | Meaning |
 |---|---|
-| F001 | `<ForEach>`/`<If>` not closed or mismatched |
-| F002 | include, layout or page file not found |
-| F003 | `<layout>`/`<include>` without `src` |
-| F004 | invalid condition or `where` expression |
-| F005 | invalid front matter |
-| F006 | collection missing or not valid data |
-| F007 | no page template for a markdown file |
-| F008 | include/layout cycle or nesting too deep |
-| F101 | broken internal link (check) |
-| F102 | image without `alt` (check) |
-| F103 | page without `<title>` (check) |
-| F104 | page without meta description (check, `--strict`) |
-| F105 | link to a missing `#anchor` (check) |
-| F106 | unresolved placeholder in output, e.g. a typo in `{frontmatter.titel}` (check) |
-| F107 | `<html>` without a `lang` attribute (check) |
-| F201 | front matter does not match its schema |
+| S001 | `<ForEach>`/`<If>` not closed or mismatched |
+| S002 | include, layout or page file not found |
+| S003 | `<layout>`/`<include>` without `src` |
+| S004 | invalid condition or `where` expression |
+| S005 | invalid front matter |
+| S006 | collection missing or not valid data |
+| S007 | no page template for a markdown file |
+| S008 | include/layout cycle or nesting too deep |
+| S101 | broken internal link (check) |
+| S102 | image without `alt` (check) |
+| S103 | page without `<title>` (check) |
+| S104 | page without meta description (check, `--strict`) |
+| S105 | link to a missing `#anchor` (check) |
+| S106 | unresolved placeholder in output, e.g. a typo in `{frontmatter.titel}` (check) |
+| S107 | `<html>` without a `lang` attribute (check) |
+| S201 | front matter does not match its schema |

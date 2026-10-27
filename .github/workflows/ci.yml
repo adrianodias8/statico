@@ -25,11 +25,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: ubuntu-latest,  target: x86_64-unknown-linux-musl, bin: forno }
-          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl, bin: forno }
-          - { os: macos-13,       target: x86_64-apple-darwin,       bin: forno }
-          - { os: macos-latest,   target: aarch64-apple-darwin,      bin: forno }
-          - { os: windows-latest, target: x86_64-pc-windows-msvc,    bin: forno.exe }
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-musl, bin: statico }
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl, bin: statico }
+          - { os: macos-13,       target: x86_64-apple-darwin,       bin: statico }
+          - { os: macos-latest,   target: aarch64-apple-darwin,      bin: statico }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc,    bin: statico.exe }
     runs-on: ${{ matrix.os }}
     permissions: { contents: write }
     steps:
@@ -44,10 +44,10 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           if [[ "${{ matrix.bin }}" == *.exe ]]; then
-            7z a ../../../forno-${{ matrix.target }}.zip ${{ matrix.bin }}
+            7z a ../../../statico-${{ matrix.target }}.zip ${{ matrix.bin }}
           else
-            tar czf ../../../forno-${{ matrix.target }}.tar.gz ${{ matrix.bin }}
+            tar czf ../../../statico-${{ matrix.target }}.tar.gz ${{ matrix.bin }}
           fi
       - uses: softprops/action-gh-release@v2
         with:
-          files: forno-${{ matrix.target }}.*
+          files: statico-${{ matrix.target }}.*

@@ -1,7 +1,7 @@
-# Forno roadmap
+# Statico roadmap
 
 Priorities come from [docs/RESEARCH.md](docs/RESEARCH.md): what people who use
-Hugo, Zola, Eleventy, Astro and Jekyll say they miss. Forno's bet is the
+Hugo, Zola, Eleventy, Astro and Jekyll say they miss. Statico's bet is the
 combination: **plain HTML, one binary, batteries included, and
 built to be driven by agents.**
 
@@ -24,8 +24,8 @@ managed standalone binary (no Node); managed esbuild; safety checks on the
 output folder; `--watch`.
 
 **Agent-ready CLI** — `--json` on every command with stable error codes,
-`forno check`, `forno add`, `forno routes`, `forno docs`, `forno explain`,
-`forno diff`, `forno schema`, `forno agents` (AGENTS.md + CLAUDE.md),
+`statico check`, `statico add`, `statico routes`, `statico docs`, `statico explain`,
+`statico diff`, `statico schema`, `statico agents` (AGENTS.md + CLAUDE.md),
 `llms.txt`, `llms-full.txt`, `.md` mirrors, `Accept: text/markdown` in dev.
 
 **Distribution** — release workflow for 5 targets, `curl | sh` installer,
@@ -42,26 +42,26 @@ npm wrapper, Homebrew formula template (fill in the repository name).
    a second, so this matters only at scale. *(#10)*
 4. **OG image generation** — a small HTML/CSS template rendered to PNG per page
    (resvg), no headless browser. *(#12)*
-5. **`forno cms init`** — generate Decap/Sveltia/Pages CMS config from content
+5. **`statico cms init`** — generate Decap/Sveltia/Pages CMS config from content
    folders and schemas, so non-developers can edit. *(#6)*
-6. **Importers** — `forno import jekyll|hugo|wordpress` for content and front matter.
+6. **Importers** — `statico import jekyll|hugo|wordpress` for content and front matter.
 7. **i18n** — `i18n/<lang>.toml` strings with `{name}` placeholders and
    language-prefixed routes. *(#14)*
-8. **`forno dev --json`** — NDJSON events (rebuilds, errors) for agents watching the server.
+8. **`statico dev --json`** — NDJSON events (rebuilds, errors) for agents watching the server.
 9. **Checksums** for managed tool downloads, and Subresource Integrity hashes for assets.
-10. **Optional `forno mcp`** — a thin wrapper over the JSON commands for chat
+10. **Optional `statico mcp`** — a thin wrapper over the JSON commands for chat
     clients that have no terminal. Deliberately last: agents with a shell are
     better served by the CLI.
 
 ## Stability policy (proposed)
 
-- Template syntax, folder conventions and `forno.json` keys are stable within a
+- Template syntax, folder conventions and `statico.json` keys are stable within a
   major version; deprecations warn for at least one minor release with a code
   and a fix hint before anything is removed.
-- Every release is checked against the fixture sites with `forno diff`; a
+- Every release is checked against the fixture sites with `statico diff`; a
   change in output is called out in the changelog.
 - Users can do the same: build with the old and new version into two folders
-  and run `forno diff old new`.
+  and run `statico diff old new`.
 
 ## Non-goals
 

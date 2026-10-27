@@ -13,7 +13,7 @@ not reachable directly; their content is cited through pages that discuss them.
   maintenance mode; Eleventy moved to Font Awesome and was renamed "Build
   Awesome"; Cloudflare acquired Astro in January 2026.
 - **Learning a template language is the top barrier.** People repeatedly ask for
-  "just HTML with includes" — Forno's core idea.
+  "just HTML with includes" — Statico's core idea.
 - **Single binary, no Node** is a headline feature (Zola, Hugo). Hugo 0.161
   requires Node 22+ for its Tailwind/PostCSS pipeline, which leaves room for a
   Tailwind-ready tool that doesn't need Node.
@@ -25,28 +25,28 @@ not reachable directly; their content is cited through pages that discuss them.
   use it, and agents send `Accept: text/markdown`.
 - **CLI with `--json` before MCP.** For local tools the 2026 consensus is CLI
   first; MCP is for authenticated, multi-system work.
-- **Name:** `forno` is taken on crates.io by an empty placeholder; unscoped npm,
-  PyPI and Homebrew were free.
+- **Name:** `statico` is taken on both crates.io and npm, so the package ships
+  as `statico-cli` on both; the binary is `statico`. Homebrew was free.
 
-## Top pain points (ranked) and what Forno does about them
+## Top pain points (ranked) and what Statico does about them
 
-| # | Pain point | Evidence (sources below) | Forno status |
+| # | Pain point | Evidence (sources below) | Statico status |
 |---|---|---|---|
-| 1 | Breaking upgrades | Julia Evans' Hugo 0.40→0.135 upgrade (~80/700 posts edited, found by diffing HTML); Hugo 0.158–0.164 breaking changes; HN on Hugo renames; Astro v6 guide | ✅ `forno diff old new` compares builds; stability policy in ROADMAP |
+| 1 | Breaking upgrades | Julia Evans' Hugo 0.40→0.135 upgrade (~80/700 posts edited, found by diffing HTML); Hugo 0.158–0.164 breaking changes; HN on Hugo renames; Astro v6 guide | ✅ `statico diff old new` compares builds; stability policy in ROADMAP |
 | 2 | Template-language learning curve | Lemmy "SSG for an idiot…" thread; Ask HN "simplest SSG" | ✅ HTML + 5 tags; filters are optional |
 | 3 | Node dependency sprawl | Smashing's Gatsby retrospective (168 deps); 11ty v3 ESM pain | ✅ single binary |
 | 4 | Tailwind without Node | Hugo 0.161 needs Node 22+; Tailwind's standalone CLI exists for this | ✅ downloads + caches the official standalone CLI; v3/v4 auto-detect |
 | 5 | Image optimisation | Zola/Hugo need hand-written srcset macros; Next export can't optimise | 🟡 width/height + lazy loading; resizing/WebP/AVIF next |
-| 6 | Editing for non-developers | HN: marketing teams keep WordPress; Decap's dated UI; Tina needs React + SaaS | ⏭ `forno cms init` (Decap/Sveltia/Pages CMS config) planned |
-| 7 | Errors that don't name the file | Hugo forum nil-pointer with no file; Astro's errors as the model | ✅ file:line, codes, `forno explain`, JSON |
-| 8 | Front matter validation | Astro content schemas | ✅ `schemas` in forno.json (F201) |
+| 6 | Editing for non-developers | HN: marketing teams keep WordPress; Decap's dated UI; Tina needs React + SaaS | ⏭ `statico cms init` (Decap/Sveltia/Pages CMS config) planned |
+| 7 | Errors that don't name the file | Hugo forum nil-pointer with no file; Astro's errors as the model | ✅ file:line, codes, `statico explain`, JSON |
+| 8 | Front matter validation | Astro content schemas | ✅ `schemas` in statico.json (S201) |
 | 9 | Components that can't nest / contain markdown | Zola shortcodes → user went back to Hugo | 🟡 includes nest and work in markdown; slots planned |
 | 10 | Performance at scale, incremental builds | Hugo 100k+ page threads; Gatsby Cloud's incremental builds gone | 🟡 parallel builds, shared caches; on-disk incremental cache planned |
 | 11 | Search | Pagefind is the default; Tim Bray's notes on its rough edges | ✅ `search.json` or `"pagefind"` |
 | 12 | OG/social images | Hugo users resort to screenshot services; Astro uses Satori | ⏭ planned (HTML subset → PNG) |
 | 13 | Custom output formats | Hugo's output formats make llms.txt easy | ✅ feeds, llms.txt, `.md` mirrors, sitemap, search.json |
 | 14 | i18n with placeholders | Zola lacks context variables in translations | ⏭ planned |
-| 15 | Link checking, accessibility, QA | Separate add-ons today (Astro link validator, jekyll-audit) | ✅ `forno check` (links, anchors, alt, title, lang, placeholders) |
+| 15 | Link checking, accessibility, QA | Separate add-ons today (Astro link validator, jekyll-audit) | ✅ `statico check` (links, anchors, alt, title, lang, placeholders) |
 
 Also mentioned: importers from WordPress/Jekyll/Hugo, Subresource Integrity, ActivityPub.
 
@@ -60,7 +60,7 @@ Also mentioned: importers from WordPress/Jekyll/Hugo, Subresource Integrity, Act
 | Astro | JS/TS | npm | Top State of JS satisfaction, schemas, errors | Complexity, v6 breaking changes, now Cloudflare-owned |
 | Jekyll | Ruby | gem | GitHub Pages, stable | Slow, Ruby toolchain |
 | Gatsby | JS | npm | Data layer, images | Maintenance mode, dependency weight |
-| DevDojo Static | JS | npm | Page routing, `<include>`, ForEach, Tailwind | Small project, Node-based (Forno's starting point) |
+| DevDojo Static | JS | npm | Page routing, `<include>`, ForEach, Tailwind | Small project, Node-based (Statico's starting point) |
 
 ## AI / agent readiness
 
@@ -71,12 +71,12 @@ Also mentioned: importers from WordPress/Jekyll/Hugo, Subresource Integrity, Act
   markdown for `Accept: text/markdown` and reports ~80% fewer tokens; Claude Code
   and OpenCode reportedly send that header.
 - **AGENTS.md** is a founding project of the Linux Foundation's Agentic AI
-  Foundation (Dec 2025). Claude Code reads CLAUDE.md, hence Forno writes both.
+  Foundation (Dec 2025). Claude Code reads CLAUDE.md, hence Statico writes both.
 - **How agents build sites today:** conventions files, existing components and
   reliable dev-server feedback matter most; separate accessibility audit passes help.
 - **CLI vs MCP:** CircleCI (Mar 2026) and Kaxil's benchmarks favour CLIs for
   local work (fewer tokens, higher task scores); MCP fits authenticated,
-  multi-system tools. Forno ships `--json` everywhere; an optional `forno mcp`
+  multi-system tools. Statico ships `--json` everywhere; an optional `statico mcp`
   wrapper can come later for chat clients without a terminal.
 
 ## Market signals
@@ -87,14 +87,16 @@ cognitive overload, breaking changes, too much magic and bloat. Popularity has
 come from speed + single binary (Hugo, Zola), zero-JS-by-default + docs +
 errors (Astro), and simplicity (11ty).
 
-## Name check: "forno"
+## Name check: "statico"
 
-- crates.io: taken (v0.1.0 "burn runtime", Aug 2026, 16 downloads, no repo) —
-  publish as `forno-cli`, or ask for a transfer.
-- npm: unscoped `forno` free (`@forno` scope exists). PyPI, Homebrew: free.
-- Domains: forno.io listed for sale; forno.app is a café in Antwerp; forno.dev,
-  forno.sh, forno.rs, getforno.com not checked.
-- Similar names, no direct conflict: Fornax (F# SSG), Fornjot (Rust CAD).
+Checked Oct 2026 (the project was renamed from "Forno" to "Statico"):
+
+- crates.io: `statico` is taken by an unrelated crate — published as
+  `statico-cli`; the binary and library are still `statico`.
+- npm: unscoped `statico` is taken by a 2016 package — the wrapper is published
+  as `statico-cli`, installing a `statico` binary.
+- Homebrew: free. PyPI and domains were not checked.
+- Similar names, no direct conflict: Statik, Staticrypt.
 - Trademark databases were not checked.
 
 ## Sources
@@ -144,4 +146,4 @@ errors (Astro), and simplicity (11ty).
 - https://dev.to/aimiten/i-rebuilt-our-company-website-with-astro-and-claude-code-heres-what-actually-worked-4c3o
 - https://github.com/thedevdojo/static
 - https://gohugo.io/tools/migrations/
-- https://crates.io/api/v1/crates/forno
+- https://crates.io/api/v1/crates/statico

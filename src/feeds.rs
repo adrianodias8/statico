@@ -1,7 +1,7 @@
 //! Atom feeds for content folders.
 //!
 //! Zero-config: every top-level `content/<folder>` whose posts have a `date`
-//! gets `/<folder>/feed.xml`. Configure or disable with `feeds` in forno.json.
+//! gets `/<folder>/feed.xml`. Configure or disable with `feeds` in statico.json.
 
 use anyhow::Result;
 use serde_json::Value;
@@ -45,11 +45,11 @@ pub fn configs(site: &Site) -> Vec<Feed> {
         Some(v @ Value::Array(_)) => serde_json::from_value::<Vec<FeedConfig>>(v.clone())
             .map(|v| v.into_iter().map(make).collect())
             .unwrap_or_else(|e| {
-                crate::diag::warn(format!("forno.json: invalid `feeds`: {e}"));
+                crate::diag::warn(format!("statico.json: invalid `feeds`: {e}"));
                 vec![]
             }),
         // Auto feeds need absolute links, so they are only made when the
-        // site has a URL (`forno build https://…` or `build.url`).
+        // site has a URL (`statico build https://…` or `build.url`).
         _ if site.base_url == "relative" => vec![],
         _ => {
             // Auto: top-level content folders with dated posts.
@@ -104,7 +104,7 @@ pub fn atom(site: &Site, feed: &Feed) -> Result<String> {
 
     if site.base_url == "relative" {
         crate::diag::warn(format!(
-            "{}: feed links are relative; build with a URL (`forno build https://example.com`) for valid feeds",
+            "{}: feed links are relative; build with a URL (`statico build https://example.com`) for valid feeds",
             feed.url
         ));
     }
@@ -136,7 +136,7 @@ pub fn atom(site: &Site, feed: &Feed) -> Result<String> {
             escape_html(&a)
         ));
     }
-    x.push_str("  <generator>Forno</generator>\n");
+    x.push_str("  <generator>Statico</generator>\n");
     for i in items {
         let s = |k: &str| i.get(k).map(value_to_string).unwrap_or_default();
         let link = site.abs_url(&s("url"));

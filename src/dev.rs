@@ -1,4 +1,4 @@
-//! `forno dev` and `forno serve`.
+//! `statico dev` and `statico serve`.
 //!
 //! The dev server renders pages on request, watches the project and reloads
 //! the browser over Server-Sent Events (no second live-reload port, no
@@ -29,8 +29,8 @@ use tokio_stream::{Stream, StreamExt, wrappers::BroadcastStream};
 use crate::assets;
 use crate::site::{Mode, Site, insert_before, sanitize_url_path};
 
-const LIVERELOAD_PATH: &str = "/__forno/livereload";
-const LIVERELOAD_SCRIPT: &str = r#"<script>(()=>{let down=false;const es=new EventSource('/__forno/livereload');es.onmessage=e=>{if(e.data==='reload')location.reload()};es.onerror=()=>{down=true};es.onopen=()=>{if(down)location.reload()}})()</script>"#;
+const LIVERELOAD_PATH: &str = "/__statico/livereload";
+const LIVERELOAD_SCRIPT: &str = r#"<script>(()=>{let down=false;const es=new EventSource('/__statico/livereload');es.onmessage=e=>{if(e.data==='reload')location.reload()};es.onerror=()=>{down=true};es.onopen=()=>{if(down)location.reload()}})()</script>"#;
 pub const DEFAULT_404: &str = include_str!("404.html");
 
 pub struct DevOptions {
@@ -78,7 +78,7 @@ pub fn dev(root: &Path, opts: DevOptions) -> Result<()> {
     let port = opts.port.or(site.config.dev.port).unwrap_or(3000);
 
     let cache_dir =
-        std::env::temp_dir().join(format!("forno-dev-{:x}", hash(&root.display().to_string())));
+        std::env::temp_dir().join(format!("statico-dev-{:x}", hash(&root.display().to_string())));
     let _ = std::fs::remove_dir_all(&cache_dir);
     std::fs::create_dir_all(cache_dir.join("assets/js"))?;
 
@@ -171,7 +171,7 @@ pub fn dev(root: &Path, opts: DevOptions) -> Result<()> {
     rt.block_on(async move {
         let (listener, port) = bind(&opts.host, port).await?;
         let url = format!("http://{}:{port}", if opts.host == "0.0.0.0" { "localhost" } else { &opts.host });
-        println!("\n  🔥 Forno dev server running at {url}\n     Watching for changes. Press Ctrl+C to stop.\n");
+        println!("\n  ⚡ Statico dev server running at {url}\n     Watching for changes. Press Ctrl+C to stop.\n");
         if opts.open {
             let _ = open::that(&url);
         }
@@ -459,7 +459,7 @@ fn error_page(msg: &str) -> String {
         .replace('<', "&lt;")
         .replace('>', "&gt;");
     format!(
-        r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>Forno · Build error</title>
+        r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>Statico · Build error</title>
 <style>body{{margin:0;font:15px/1.5 ui-sans-serif,system-ui,sans-serif;background:#0b0b0c;color:#e5e5e5}}
 main{{max-width:860px;margin:10vh auto;padding:0 24px}}h1{{font-size:18px;color:#f87171;margin:0 0 16px}}
 pre{{white-space:pre-wrap;background:#18181b;border:1px solid #3f3f46;border-radius:10px;padding:18px;font:13px/1.6 ui-monospace,monospace;color:#fafafa}}
@@ -468,7 +468,7 @@ p{{color:#a1a1aa;font-size:13px}}</style></head><body><main><h1>⚠ Couldn't ren
     )
 }
 
-/// `forno build --watch`: rebuild into the output folder on every change.
+/// `statico build --watch`: rebuild into the output folder on every change.
 pub fn watch_build(root: &Path, opts: impl Fn() -> crate::build::BuildOptions) -> Result<()> {
     let run = || match crate::build::build(root, opts()) {
         Ok(r) => Some(r.out_dir),
@@ -493,7 +493,7 @@ pub fn watch_build(root: &Path, opts: impl Fn() -> crate::build::BuildOptions) -
     })?;
     watcher.watch(&root, RecursiveMode::Recursive)?;
     println!("  Watching for changes (Ctrl+C to stop)…");
-    let none = PathBuf::from("/nonexistent-forno-cache");
+    let none = PathBuf::from("/nonexistent-statico-cache");
     while let Ok(first) = rx.recv() {
         let mut batch = vec![first];
         while let Ok(p) = rx.recv_timeout(Duration::from_millis(100)) {
@@ -510,11 +510,11 @@ pub fn watch_build(root: &Path, opts: impl Fn() -> crate::build::BuildOptions) -
     Ok(())
 }
 
-/// `forno serve`: preview a finished build exactly as a static host would.
+/// `statico serve`: preview a finished build exactly as a static host would.
 pub fn serve(dir: &Path, host: &str, port: u16, open_browser: bool) -> Result<()> {
     use tower_http::services::{ServeDir, ServeFile};
     if !dir.is_dir() {
-        anyhow::bail!("{} does not exist. Run `forno build` first.", dir.display());
+        anyhow::bail!("{} does not exist. Run `statico build` first.", dir.display());
     }
     let svc = ServeDir::new(dir).not_found_service(ServeFile::new(dir.join("404.html")));
     let rt = tokio::runtime::Builder::new_multi_thread()

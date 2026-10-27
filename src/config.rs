@@ -1,4 +1,4 @@
-//! `forno.json` (or the legacy `static.json`), and `.env`. All optional.
+//! `statico.json` (or the legacy `static.json`), and `.env`. All optional.
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -10,7 +10,7 @@ use std::path::Path;
 pub struct Config {
     pub build: BuildConfig,
     pub dev: DevConfig,
-    /// Extra HTTP headers sent by `forno dev` / `forno serve`.
+    /// Extra HTTP headers sent by `statico dev` / `statico serve`.
     pub headers: Map<String, Value>,
     /// Arbitrary site-wide data, available in templates as `{site.key}`.
     /// `site.name`, `site.description`, `site.image`, `site.author` and
@@ -103,9 +103,9 @@ impl Config {
         serde_json::from_str(&text).with_context(|| format!("{name} is not valid"))
     }
 
-    /// `forno.json`, falling back to `static.json` for projects made for Static.
+    /// `statico.json`, falling back to `static.json` for projects made for Static.
     pub fn path(root: &Path) -> Option<std::path::PathBuf> {
-        ["forno.json", "static.json"]
+        ["statico.json", "static.json"]
             .iter()
             .map(|n| root.join(n))
             .find(|p| p.is_file())
@@ -162,7 +162,7 @@ mod tests {
             Some("https://old")
         );
         std::fs::write(
-            d.path().join("forno.json"),
+            d.path().join("statico.json"),
             r#"{"build": {"url": "https://new"}}"#,
         )
         .unwrap();

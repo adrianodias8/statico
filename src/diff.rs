@@ -1,5 +1,5 @@
-//! `forno diff <old> <new>`: compare two build outputs. Build with the old
-//! Forno version into one folder and the new one into another; an empty diff
+//! `statico diff <old> <new>`: compare two build outputs. Build with the old
+//! Statico version into one folder and the new one into another; an empty diff
 //! means the upgrade changed nothing.
 
 use anyhow::{Result, bail};

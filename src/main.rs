@@ -3,14 +3,14 @@ use clap::{Parser, Subcommand};
 use serde_json::json;
 use std::path::{Path, PathBuf};
 
-use forno::{build, check, diag, docs, new, say, scaffold};
+use statico::{build, check, diag, docs, new, say, scaffold};
 
 #[derive(Parser)]
 #[command(
-    name = "forno",
+    name = "statico",
     version,
-    about = "🔥 Forno — bake plain HTML into fast static sites.",
-    after_help = "Docs: `forno docs` (offline reference) · `forno explain <code>` · add --json for machine-readable output"
+    about = "⚡ Statico — plain HTML into fast static sites.",
+    after_help = "Docs: `statico docs` (offline reference) · `statico explain <code>` · add --json for machine-readable output"
 )]
 struct Cli {
     /// Project directory (defaults to the current directory)
@@ -39,7 +39,7 @@ enum Cmd {
         #[arg(long)]
         dev: bool,
     },
-    /// Turn the current (or -C) folder into a minimal Forno project
+    /// Turn the current (or -C) folder into a minimal Statico project
     Init {
         /// Site name (default: the folder name)
         #[arg(long)]
@@ -101,17 +101,17 @@ enum Cmd {
     },
     /// List every URL and the file that renders it
     Routes,
-    /// Show the reference: `forno docs`, `forno docs loops`, `forno docs --all`
+    /// Show the reference: `statico docs`, `statico docs loops`, `statico docs --all`
     Docs {
         topic: Option<String>,
         #[arg(long)]
         all: bool,
     },
-    /// Explain an error code, e.g. `forno explain F101`
+    /// Explain an error code, e.g. `statico explain S101`
     Explain { code: String },
     /// Compare two build output folders (e.g. before/after an upgrade)
     Diff { old: PathBuf, new: PathBuf },
-    /// Print the JSON Schema for forno.json
+    /// Print the JSON Schema for statico.json
     Schema,
     /// Write AGENTS.md (and CLAUDE.md) describing this project for AI coding agents
     Agents,
@@ -207,9 +207,9 @@ fn run(cli: Cli) -> Result<i32> {
                 print_json(&json!({"ok": true, "path": path}));
             }
             if dev {
-                forno::dev::dev(
+                statico::dev::dev(
                     &path,
-                    forno::dev::DevOptions {
+                    statico::dev::DevOptions {
                         url: None,
                         port: None,
                         host: "127.0.0.1".into(),
@@ -221,16 +221,16 @@ fn run(cli: Cli) -> Result<i32> {
         Cmd::Init { name } => {
             let files = scaffold::init(&cli.dir, name.as_deref())?;
             created(j, &cli.dir, files);
-            say!("\nNext: forno dev");
+            say!("\nNext: statico dev");
         }
         Cmd::Dev {
             url,
             port,
             host,
             open,
-        } => forno::dev::dev(
+        } => statico::dev::dev(
             &cli.dir,
-            forno::dev::DevOptions {
+            statico::dev::DevOptions {
                 url,
                 port,
                 host,
@@ -252,7 +252,7 @@ fn run(cli: Cli) -> Result<i32> {
                 hash_assets: None,
             };
             if watch {
-                return forno::dev::watch_build(&cli.dir, opts).map(|_| 0);
+                return statico::dev::watch_build(&cli.dir, opts).map(|_| 0);
             }
             let report = build::build(&cli.dir, opts())?;
             if j {
@@ -268,11 +268,11 @@ fn run(cli: Cli) -> Result<i32> {
             let dir = match out {
                 Some(o) => o,
                 None => {
-                    let site = forno::site::Site::load(&cli.dir, forno::site::Mode::Build, None)?;
+                    let site = statico::site::Site::load(&cli.dir, statico::site::Mode::Build, None)?;
                     build::output_dir(&site, None)
                 }
             };
-            forno::dev::serve(&dir, &host, port, open)?;
+            statico::dev::serve(&dir, &host, port, open)?;
         }
         Cmd::Check { url, strict } => {
             let r = check::check(&cli.dir, url, strict)?;
@@ -290,7 +290,7 @@ fn run(cli: Cli) -> Result<i32> {
                     r.warnings.len()
                 );
                 if !r.errors.is_empty() || !r.warnings.is_empty() {
-                    println!("  Run `forno explain <code>` for details on any code.");
+                    println!("  Run `statico explain <code>` for details on any code.");
                 }
             }
             return Ok(if r.ok { 0 } else { 1 });
@@ -298,7 +298,7 @@ fn run(cli: Cli) -> Result<i32> {
         Cmd::Add { what } => {
             let root = &cli.dir;
             if !matches!(what, AddCmd::Layout { .. }) && !root.join("pages").is_dir() {
-                bail!("no `pages` folder here; run `forno init` first (or use -C <dir>)");
+                bail!("no `pages` folder here; run `statico init` first (or use -C <dir>)");
             }
             let files = match what {
                 AddCmd::Page {
@@ -311,7 +311,7 @@ fn run(cli: Cli) -> Result<i32> {
                     title,
                     draft,
                 } => {
-                    let schema = forno::config::Config::load(root)?
+                    let schema = statico::config::Config::load(root)?
                         .schemas
                         .get(folder.trim_matches('/'))
                         .cloned();
@@ -324,16 +324,16 @@ fn run(cli: Cli) -> Result<i32> {
             created(j, root, files);
         }
         Cmd::Routes => {
-            let site = forno::site::Site::load(&cli.dir, forno::site::Mode::Dev, None)?;
+            let site = statico::site::Site::load(&cli.dir, statico::site::Mode::Dev, None)?;
             let routes = site.routes()?;
             if j {
                 let list: Vec<_> = routes
                     .iter()
                     .map(|r| {
                         let kind = match r.source {
-                            forno::site::Source::Page(_) => "page",
-                            forno::site::Source::Content(_) => "content",
-                            forno::site::Source::Term { .. } => "term",
+                            statico::site::Source::Page(_) => "page",
+                            statico::site::Source::Content(_) => "content",
+                            statico::site::Source::Term { .. } => "term",
                         };
                         json!({"url": r.url, "source": site.rel(r.source.path()), "kind": kind, "output": r.out})
                     })
@@ -358,7 +358,7 @@ fn run(cli: Cli) -> Result<i32> {
                     }
                 }
             } else {
-                println!("Forno reference — `forno docs <topic>` or `forno docs --all`\n");
+                println!("Statico reference — `statico docs <topic>` or `statico docs --all`\n");
                 for (name, _) in docs::topics() {
                     println!("  {name:<13} {}", docs::summary(name));
                 }
@@ -369,10 +369,10 @@ fn run(cli: Cli) -> Result<i32> {
                 print_json(&json!({"ok": true, "code": c.code, "title": c.title, "fix": c.fix}))
             }
             Some(c) => println!("{}: {}\n\n{}", c.code, c.title, c.fix),
-            None => bail!("unknown code `{code}`; see `forno docs errors`"),
+            None => bail!("unknown code `{code}`; see `statico docs errors`"),
         },
         Cmd::Diff { old, new } => {
-            let r = forno::diff::diff(&old, &new)?;
+            let r = statico::diff::diff(&old, &new)?;
             if j {
                 print_json(&r);
             } else {
@@ -415,7 +415,7 @@ fn run(cli: Cli) -> Result<i32> {
                     );
                 }
                 println!(
-                    "\n  Any GitHub repo, local folder or .zip works too: forno new my-site --template owner/repo"
+                    "\n  Any GitHub repo, local folder or .zip works too: statico new my-site --template owner/repo"
                 );
             }
         }
@@ -441,7 +441,7 @@ fn main() {
             } else {
                 eprintln!("error: {e:#}");
                 if let Some(code) = errors.iter().find_map(|d| d.code) {
-                    eprintln!("  (run `forno explain {code}` for help)");
+                    eprintln!("  (run `statico explain {code}` for help)");
                 }
             }
             1

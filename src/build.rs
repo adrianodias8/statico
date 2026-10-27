@@ -1,4 +1,4 @@
-//! `forno build`
+//! `statico build`
 
 use anyhow::{Context, Result, bail};
 use rayon::prelude::*;
@@ -22,7 +22,7 @@ pub struct BuildOptions {
     pub out: Option<PathBuf>,
     /// Skip Tailwind/esbuild (copy assets as-is). Useful for CI without Node.
     pub skip_tools: bool,
-    /// Override `build.minify` (e.g. `--no-minify`, and `forno check`).
+    /// Override `build.minify` (e.g. `--no-minify`, and `statico check`).
     pub minify: Option<bool>,
     /// Override `build.hash_assets`.
     pub hash_assets: Option<bool>,
@@ -95,7 +95,7 @@ fn check_safe_to_clean(root: &Path, out: &Path) -> Result<()> {
     }
     if out_abs.join("pages").is_dir() && out_abs.join("layouts").is_dir() {
         bail!(
-            "refusing to clean {}: it looks like a Forno project",
+            "refusing to clean {}: it looks like a Statico project",
             out.display()
         );
     }
@@ -312,7 +312,7 @@ pub fn build(root: &Path, opts: BuildOptions) -> Result<Report> {
         .filter(|p| p.kind == "content")
         .count();
     say!(
-        "🔥 Baked {} page(s) ({content} from markdown) into {} in {} ms",
+        "⚡ Built {} page(s) ({content} from markdown) into {} in {} ms",
         report.pages,
         site.rel(&out).trim_start_matches("./"),
         report.duration_ms

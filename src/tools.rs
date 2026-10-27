@@ -4,8 +4,8 @@
 //!   the first-party plugins such as typography and forms).
 //! * esbuild: the platform binary from the npm registry tarball.
 //!
-//! Binaries are cached in `~/.cache/forno/tools/` (or `%LOCALAPPDATA%\forno`)
-//! and downloaded once. Set `FORNO_OFFLINE=1` to disable downloads.
+//! Binaries are cached in `~/.cache/statico/tools/` (or `%LOCALAPPDATA%\statico`)
+//! and downloaded once. Set `STATICO_OFFLINE=1` to disable downloads.
 
 use anyhow::{Context, Result, bail};
 use std::io::Read;
@@ -16,7 +16,7 @@ pub const TAILWIND_V4: &str = "4.3.3";
 pub const ESBUILD: &str = "0.28.2";
 
 pub fn cache_dir() -> Option<PathBuf> {
-    if let Some(d) = std::env::var_os("FORNO_CACHE_DIR") {
+    if let Some(d) = std::env::var_os("STATICO_CACHE_DIR") {
         return Some(PathBuf::from(d));
     }
     let base = if cfg!(windows) {
@@ -26,11 +26,11 @@ pub fn cache_dir() -> Option<PathBuf> {
             .map(PathBuf::from)
             .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")))
     }?;
-    Some(base.join("forno").join("tools"))
+    Some(base.join("statico").join("tools"))
 }
 
 fn offline() -> bool {
-    std::env::var("FORNO_OFFLINE").is_ok_and(|v| !v.is_empty() && v != "0")
+    std::env::var("STATICO_OFFLINE").is_ok_and(|v| !v.is_empty() && v != "0")
 }
 
 /// `(os, arch)` names used by Tailwind release assets.
