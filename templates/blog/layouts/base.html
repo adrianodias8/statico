@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{title}</title>
+    {seo}
+    <meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#14171d" media="(prefers-color-scheme: dark)">
+    <link rel="preload" href="/assets/fonts/Archivo-normal-100-900.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/assets/fonts/Literata-normal-200-900.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/assets/css/main.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="masthead">
+        <div class="wrap masthead__inner">
+            <a class="masthead__name" href="/">{site.name}</a>
+            <nav class="masthead__nav" aria-label="Main">
+                <a href="/"<If condition="page.url == '/' || page.url contains '/page/'"> aria-current="page"</If>>Timetable</a>
+                <a href="/lines/"<If condition="page.url contains '/lines/'"> aria-current="page"</If>>Lines</a>
+                <a href="/about/"<If condition="page.url contains '/about/'"> aria-current="page"</If>>About</a>
+                <a href="/posts/feed.xml">Feed</a>
+            </nav>
+        </div>
+    </header>
+    <main id="main">
+        {slot}
+    </main>
+    <footer class="footer">
+        <div class="wrap footer__inner">
+            <p>{site.name} · by {site.author}</p>
+            <p>Subscribe with the <a href="/posts/feed.xml">Atom feed</a>. Built with <a href="https://github.com/adrianodias8/statico">Statico</a>.</p>
+        </div>
+    </footer>
+</body>
+</html>

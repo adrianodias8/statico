@@ -1,0 +1,19 @@
+<layout src="base.html" title="Lines · {site.name}">
+
+<section class="opener wrap">
+    <div class="opener__table">
+        <p class="opener__number">Table 2</p>
+        <h1>Lines</h1>
+    </div>
+    <p class="opener__about">Every post runs on one or more lines. Pick a line to see only its departures.</p>
+</section>
+
+<div class="wrap">
+    <ul class="line-list">
+        <ForEach collection="lines" as="l">
+        <li><a class="line-list__link line-list__link--{l.color}" href="/lines/{l.name}/"><span class="badge badge--{l.color} badge--big"><span class="badge__code">{l.code}</span></span><span class="line-list__name">{l.title}</span></a></li>
+        </ForEach>
+    </ul>
+</div>
+
+</layout>

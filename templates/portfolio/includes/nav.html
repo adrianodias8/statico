@@ -1,0 +1,3 @@
+<nav class="rail" aria-label="Main">
+    <ForEach collection="menu" as="item"><a href="{item.link}"<If condition="item.link != '/' && page.url contains item.link"> aria-current="page"</If>>{item.title}</a></ForEach>
+</nav>

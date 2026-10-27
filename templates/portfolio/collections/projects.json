@@ -1,0 +1,10 @@
+[
+  {
+    "name": "Statico",
+    "about": "A static site generator I wrote in Rust. One binary, no Node: plain HTML and markdown in, fast static sites out. It builds this site.",
+    "url": "https://github.com/adrianodias8/statico",
+    "link": "Statico on GitHub",
+    "image": "/assets/images/statico.png",
+    "alt": "The Statico logo: three stacked bars on a dark rounded square, the middle one orange"
+  }
+]

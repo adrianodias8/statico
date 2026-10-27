@@ -1,0 +1,21 @@
+<layout src="base.html" title="Line: {tag} · {site.name}">
+
+<section class="opener wrap">
+    <div class="opener__table">
+        <ForEach collection="lines" as="l" where="l.name == term.slug"><p class="opener__number"><span class="badge badge--{l.color} badge--big badge--lit"><span class="badge__code">{l.code}</span></span></p>
+        <h1>{l.title}</h1></ForEach>
+    </div>
+    <p class="opener__about">Departures on this line: {term.count}. <a href="/lines/">All lines</a></p>
+</section>
+
+<div class="wrap">
+    <table class="tt">
+        <caption class="visually-hidden">Posts on this line</caption>
+        <include src="table-head.html" />
+        <tbody>
+            <ForEach content="posts" as="post" orderBy="date, desc" where="post.tags contains term.slug"><include src="row.html" /></ForEach>
+        </tbody>
+    </table>
+</div>
+
+</layout>

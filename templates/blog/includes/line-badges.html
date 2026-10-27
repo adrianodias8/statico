@@ -1,0 +1,1 @@
+<span class="badges"><ForEach collection="post.tags" as="t"><ForEach collection="lines" as="l" where="l.name == t"><a class="badge badge--{l.color}" href="/lines/{l.name}/" title="{l.title}"><span class="badge__code">{l.code}</span><span class="badge__name">{l.title}</span></a></ForEach></ForEach></span>

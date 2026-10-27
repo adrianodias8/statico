@@ -1,0 +1,11 @@
+{
+  "site": {
+    "name": "Departures",
+    "description": "A blog built with Statico's blog template. Replace this with a line about what you write.",
+    "author": "Your Name",
+    "language": "en"
+  },
+  "markdown": { "highlight": "base16-eighties.dark" },
+  "feeds": [{ "content": "posts", "title": "Departures" }],
+  "schemas": { "posts": { "title": "string", "date": "date", "description": "string", "tags": "list" } }
+}

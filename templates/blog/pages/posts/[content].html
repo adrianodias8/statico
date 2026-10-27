@@ -1,0 +1,32 @@
+<layout src="base.html" title="{frontmatter.title} · {site.name}">
+
+<article class="post">
+    <header class="post__head wrap">
+        <p class="running-head"><a href="/">Table 1</a> · Departure of {frontmatter.date|date:"%-d %B %Y"}</p>
+        <h1>{frontmatter.title}</h1>
+        <dl class="post__facts">
+            <div><dt>Departs</dt><dd><time datetime="{frontmatter.date}">{frontmatter.date|date:"%d %b %Y"}</time></dd></div>
+            <div><dt>Journey</dt><dd>{content|reading_time} min</dd></div>
+            <div><dt>Lines</dt><dd><ForEach collection="frontmatter.tags" as="t"><ForEach collection="lines" as="l" where="l.name == t"><a class="badge badge--{l.color}" href="/lines/{l.name}/"><span class="badge__code">{l.code}</span><span class="badge__name">{l.title}</span></a></ForEach></ForEach></dd></div>
+        </dl>
+    </header>
+    <div class="column">
+        {content}
+    </div>
+</article>
+
+<nav class="connections wrap" aria-labelledby="connections-title">
+    <h2 id="connections-title">Connections</h2>
+    <table class="tt tt--compact">
+        <tbody>
+            <ForEach content="posts" as="post" where="post.date > frontmatter.date" orderBy="date" count="1">
+            <tr><th scope="row">Next</th><td class="tt__date">{post.date|date:"%d %b %Y"}</td><td class="tt__post"><a class="tt__title" href="{post.url}">{post.title}</a></td></tr>
+            </ForEach>
+            <ForEach content="posts" as="post" where="post.date < frontmatter.date" orderBy="date, desc" count="1">
+            <tr><th scope="row">Previous</th><td class="tt__date">{post.date|date:"%d %b %Y"}</td><td class="tt__post"><a class="tt__title" href="{post.url}">{post.title}</a></td></tr>
+            </ForEach>
+        </tbody>
+    </table>
+</nav>
+
+</layout>

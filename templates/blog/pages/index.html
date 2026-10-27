@@ -1,0 +1,29 @@
+<layout src="base.html" title="{site.name}">
+
+<section class="opener wrap">
+    <div class="opener__table">
+        <p class="opener__number">Table 1</p>
+        <h1>Every post, newest first</h1>
+    </div>
+    <p class="opener__about">{site.description}</p>
+</section>
+
+<div class="wrap">
+    <table class="tt">
+        <caption class="visually-hidden">Posts, newest first</caption>
+        <include src="table-head.html" />
+        <tbody>
+            <ForEach content="posts" as="post" orderBy="date, desc" paginate="20"><include src="row.html" /></ForEach>
+        </tbody>
+    </table>
+    <If condition="pagination.total > 1">
+    <nav class="pager" aria-label="Pages">
+        <If condition="pagination.has_prev"><a href="{pagination.prev_url}">Newer departures</a></If>
+        <span>Sheet {pagination.current} of {pagination.total}</span>
+        <If condition="pagination.has_next"><a href="{pagination.next_url}">Earlier departures</a></If>
+    </nav>
+    </If>
+    <p class="tt-notes">Journey is reading time, at about 220 words a minute. Lines group posts by subject: <a href="/lines/">see every line</a>.</p>
+</div>
+
+</layout>

@@ -1,0 +1,21 @@
+<layout src="page.html" title="{frontmatter.title} · {site.name}">
+
+<article class="post wrap">
+    <header class="post__header">
+        <a class="back" href="/writing/">Writing</a>
+        <h1>{frontmatter.title}</h1>
+        <p class="post__meta"><time datetime="{frontmatter.date}">{frontmatter.date|date:"%-d %B %Y"}</time> · {content|reading_time} min read</p>
+    </header>
+    <div class="prose">
+        {content}
+    </div>
+</article>
+
+<section class="exit" aria-labelledby="closing-title">
+    <div class="wrap exit__inner">
+    <h2 id="closing-title">Need a hand with your site?</h2>
+        <include src="door.html" />
+    </div>
+</section>
+
+</layout>

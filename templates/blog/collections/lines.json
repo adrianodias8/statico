@@ -1,0 +1,5 @@
+[
+  { "name": "start-here", "title": "Start here", "code": "S", "color": "red" },
+  { "name": "writing", "title": "Writing", "code": "W", "color": "blue" },
+  { "name": "reference", "title": "Reference", "code": "R", "color": "green" }
+]

@@ -1,0 +1,10 @@
+<nav class="index" aria-label="Documentation">
+    <ForEach collection="sections" as="s">
+    <div class="index__section index__section--{s.hue}">
+        <h2 class="index__title">{s.title}</h2>
+        <ol class="index__pages">
+            <ForEach content="docs" as="d" where="d.section == s.name" orderBy="order"><li><a href="{d.url}"<If condition="d.url == page.url"> aria-current="page"</If>><span class="index__no">{d.order}</span>{d.title}</a></li></ForEach>
+        </ol>
+    </div>
+    </ForEach>
+</nav>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{title}</title>
+    {seo}
+    <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#161618" media="(prefers-color-scheme: dark)">
+    <link rel="preload" href="/assets/fonts/HankenGrotesk-normal-100-900.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/assets/fonts/BricolageGrotesque-normal-200-800.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/assets/css/main.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <script src="/assets/js/search.js" defer></script>
+</head>
+<body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="topbar">
+        <a class="topbar__name" href="/">{site.name}</a>
+        <form class="search" role="search" action="/search/" data-search data-base="{ url('/') }">
+            <label class="visually-hidden" for="q">Search the docs</label>
+            <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off" spellcheck="false">
+            <div class="search__results" data-results hidden></div>
+        </form>
+        <a class="topbar__repo" href="{site.repo}">Source</a>
+    </header>
+    {slot}
+</body>
+</html>

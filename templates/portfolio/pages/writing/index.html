@@ -1,0 +1,22 @@
+<layout src="page.html" title="Writing · {site.name}" description="Posts about building for the web, side projects and the tools I make.">
+
+<section class="page-intro wrap">
+    <h1>Writing</h1>
+    <p class="lead">Notes on building for the web, side projects, and the tools I make along the way. Also available as a <a href="/writing/feed.xml">feed</a>.</p>
+</section>
+
+<section class="wrap section section--flush" aria-labelledby="all-posts">
+    <h2 id="all-posts" class="visually-hidden">All posts, newest first</h2>
+    <ol class="notes">
+        <ForEach content="writing" as="post" orderBy="date, desc" paginate="10"><include src="post-list.html" /></ForEach>
+    </ol>
+    <If condition="pagination.total > 1">
+    <nav class="pager" aria-label="Pages">
+        <If condition="pagination.has_prev"><a href="{pagination.prev_url}">Newer posts</a></If>
+        <span>Page {pagination.current} of {pagination.total}</span>
+        <If condition="pagination.has_next"><a href="{pagination.next_url}">Older posts</a></If>
+    </nav>
+    </If>
+</section>
+
+</layout>

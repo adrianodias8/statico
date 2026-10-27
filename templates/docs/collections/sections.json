@@ -1,0 +1,5 @@
+[
+  { "name": "start", "title": "Getting started", "hue": "rose" },
+  { "name": "write", "title": "Writing pages", "hue": "teal" },
+  { "name": "ship", "title": "Search and shipping", "hue": "amber" }
+]

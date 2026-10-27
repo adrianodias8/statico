@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240" role="img" aria-label="Three coloured lines running left to right, crossing at a single station">
+  <rect width="720" height="240" fill="#f4f4f2"/>
+  <path d="M40 60 H300 L360 120 H680" fill="none" stroke="#d4372c" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M40 120 H680" fill="none" stroke="#2754b8" stroke-width="10"/>
+  <path d="M40 180 H300 L360 120 H680" fill="none" stroke="#2c8a4e" stroke-width="10" stroke-linejoin="round"/>
+  <circle cx="360" cy="120" r="22" fill="#fff" stroke="#16191f" stroke-width="6"/>
+  <g font-family="Archivo, Arial, sans-serif" font-size="20" font-weight="700" fill="#16191f">
+    <text x="40" y="44">S</text><text x="40" y="104">W</text><text x="40" y="216">R</text>
+  </g>
+</svg>

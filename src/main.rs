@@ -29,7 +29,7 @@ enum Cmd {
     New {
         /// Folder to create
         folder: String,
-        /// Template: starter, aria, boxed, blog, stone, owner/repo, a GitHub URL, a local folder or .zip
+        /// Template: portfolio, blog, docs (built in), starter, aria, boxed, stone, owner/repo, a GitHub URL, a local folder or .zip
         #[arg(short, long, default_value = "starter")]
         template: String,
         /// Don't run `npm install` afterwards
@@ -150,7 +150,8 @@ fn legacy_args() -> Vec<String> {
     if args.iter().any(|a| a == "new") {
         for a in args.iter_mut().skip(2) {
             if let Some(slug) = a.strip_prefix("--")
-                && new::TEMPLATES.iter().any(|t| t.slug == slug)
+                && (new::TEMPLATES.iter().any(|t| t.slug == slug)
+                    || new::BUILTINS.iter().any(|t| t.slug == slug))
             {
                 *a = format!("--template={slug}");
             }
@@ -403,12 +404,18 @@ fn run(cli: Cli) -> Result<i32> {
         }
         Cmd::Templates => {
             if j {
-                let list: Vec<_> = new::TEMPLATES
+                let mut list: Vec<_> = new::BUILTINS
                     .iter()
-                    .map(|t| json!({"slug": t.slug, "about": t.about, "repo": format!("https://github.com/{}", t.repo)}))
+                    .map(|t| json!({"slug": t.slug, "about": t.about, "builtin": true}))
                     .collect();
+                list.extend(new::TEMPLATES.iter().map(|t| json!({"slug": t.slug, "about": t.about, "builtin": false, "repo": format!("https://github.com/{}", t.repo)})));
                 print_json(&json!({"ok": true, "templates": list}));
             } else {
+                println!("  Built in (work offline):");
+                for t in new::BUILTINS {
+                    println!("  {:<10} {}", t.slug, t.about);
+                }
+                println!("\n  From GitHub (made for DevDojo's Static):");
                 for t in new::TEMPLATES {
                     println!(
                         "  {:<8} {:<26} https://github.com/{}",

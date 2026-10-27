@@ -1,0 +1,37 @@
+<layout src="base.html" title="{frontmatter.title} · {site.name}">
+<div class="shell">
+    <details class="index-toggle" open>
+        <summary>Contents</summary>
+        <include src="index.html" />
+    </details>
+    <main id="main" class="page">
+        <ForEach collection="sections" as="s" where="s.name == frontmatter.section">
+        <header class="opener opener--{s.hue}">
+            <div class="opener__specimen">
+                <p class="opener__no" aria-hidden="true">{frontmatter.order}</p>
+                <h1>{frontmatter.title}</h1>
+            </div>
+            <div class="opener__caption">
+                <p>{frontmatter.description}</p>
+                <p class="opener__where">{s.title}, page {frontmatter.order}</p>
+            </div>
+        </header>
+        </ForEach>
+        <article class="column">
+            {content}
+        </article>
+        <nav class="turn" aria-label="Previous and next">
+            <ForEach content="docs" as="d" where="d.order < frontmatter.order" orderBy="order, desc" count="1"><a class="turn__link" href="{d.url}" rel="prev"><span class="turn__dir">Previous</span><span class="turn__title">{d.title}</span></a></ForEach>
+            <ForEach content="docs" as="d" where="d.order > frontmatter.order" orderBy="order" count="1"><a class="turn__link turn__link--next" href="{d.url}" rel="next"><span class="turn__dir">Next</span><span class="turn__title">{d.title}</span></a></ForEach>
+        </nav>
+    </main>
+    <aside class="outline" aria-labelledby="outline-title">
+        <If condition="toc.length > 0">
+        <h2 id="outline-title" class="outline__title">On this page</h2>
+        <ul>
+            <ForEach collection="toc" as="h" where="h.lvl == 2 || h.lvl == 3"><li class="outline__lvl{h.lvl}"><a href="#{h.slug}">{h.content}</a></li></ForEach>
+        </ul>
+        </If>
+    </aside>
+</div>
+</layout>

@@ -1,0 +1,6 @@
+<tr>
+    <td class="tt__date"><time datetime="{post.date}">{post.date|date:"%d %b %Y"}</time></td>
+    <td class="tt__post"><a class="tt__title" href="{post.url}">{post.title}</a><span class="tt__about">{post.description}</span></td>
+    <td class="tt__lines"><include src="line-badges.html" /></td>
+    <td class="tt__journey">{post.html|reading_time} min</td>
+</tr>

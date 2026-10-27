@@ -1,0 +1,9 @@
+[
+  { "name": "Drupal development", "about": "New builds, custom modules and themes, and migrations from Drupal 7 to current Drupal." },
+  { "name": "Laravel development", "about": "Web applications, APIs and integrations, built to be maintained after launch." },
+  { "name": "TALL stack", "about": "Tailwind, Alpine.js, Laravel and Livewire for interactive interfaces without a separate front-end app." },
+  { "name": "Node.js development", "about": "Services, tooling and integrations where JavaScript is the right fit." },
+  { "name": "Static sites", "about": "Fast, secure sites with nothing to patch, built with Statico, the generator I wrote." },
+  { "name": "Website design", "about": "Layouts and interfaces designed for the content and people they serve." },
+  { "name": "Branding and logos", "about": "Identity work for small businesses and projects that need one." }
+]

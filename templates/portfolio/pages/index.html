@@ -1,0 +1,88 @@
+<layout src="base.html" title="{site.name}, freelance web developer in Brussels">
+
+<header class="shop">
+    <div class="fascia">
+        <div class="fascia__board">
+            <p class="sign"><a href="/">Adriano Dias</a></p>
+            <p class="trade" lang="fr">Développeur web <span lang="nl">· Webontwikkelaar</span> <span lang="en">· Web developer</span></p>
+        </div>
+        <include src="nav.html" />
+    </div>
+    <main id="main" class="front">
+        <div class="pilaster" aria-hidden="true"></div>
+        <section class="pane pane--trade" aria-labelledby="window-title">
+            <h1 id="window-title" class="glass-title">Drupal &amp; Laravel sites, built and looked after.</h1>
+            <p class="glass-lead">I'm Adriano, a freelance web developer in Brussels. I've built with Drupal since Drupal 7, and for the past five years I've delivered web projects as a contractor for the European Commission.</p>
+            <ul class="glass-list" aria-label="Services">
+                <ForEach collection="services" as="s"><li>{s.name}</li></ForEach>
+            </ul>
+        </section>
+        <figure class="pane pane--portrait">
+            <img src="/assets/images/adriano.jpg" alt="Black and white portrait of Adriano Dias, wearing round glasses" width="900" height="1350">
+        </figure>
+        <section class="door" aria-label="Get in touch">
+            <p class="door__plaque">Since<br><strong>2011</strong></p>
+            <include src="door.html" />
+        </section>
+        <div class="pilaster" aria-hidden="true"></div>
+    </main>
+    <div class="riser" aria-hidden="true"></div>
+</header>
+
+<div class="interior">
+
+<section class="room wrap" id="services" aria-labelledby="services-title">
+    <div class="room__head">
+        <h2 id="services-title">The trade</h2>
+        <p>Most of my work is Drupal and Laravel, from first build to long-term maintenance. Around it, the things a site usually needs.</p>
+    </div>
+    <dl class="trade-list">
+        <ForEach collection="services" as="s">
+        <div class="trade-list__item"><dt>{s.name}</dt><dd>{s.about}</dd></div>
+        </ForEach>
+    </dl>
+</section>
+
+<section class="room wrap" id="experience" aria-labelledby="experience-title">
+    <div class="room__head">
+        <h2 id="experience-title">The record</h2>
+        <p>I started at 17, on an internship, the year Drupal 7 came out.</p>
+    </div>
+    <include src="experience.html" />
+</section>
+
+<section class="workshop" id="projects" aria-labelledby="projects-title">
+    <div class="wrap workshop__inner">
+        <ForEach collection="projects" as="p">
+        <div class="workshop__text">
+            <h2 id="projects-title">Made in the workshop</h2>
+            <p class="workshop__name">{p.name}</p>
+            <p>{p.about}</p>
+            <a class="brass-link" href="{p.url}">{p.link}</a>
+        </div>
+        <img class="workshop__image" src="{p.image}" alt="{p.alt}" width="1776" height="900">
+        </ForEach>
+    </div>
+</section>
+
+<section class="room wrap" id="writing" aria-labelledby="writing-title">
+    <div class="room__head room__head--row">
+        <h2 id="writing-title">Notes on the counter</h2>
+        <a class="brass-link" href="/writing/">All writing</a>
+    </div>
+    <ol class="notes">
+        <ForEach content="writing" as="post" orderBy="date, desc" count="3"><include src="post-list.html" /></ForEach>
+    </ol>
+</section>
+
+<section class="exit" aria-labelledby="exit-title">
+    <div class="wrap exit__inner">
+        <h2 id="exit-title">The door's open.</h2>
+        <p>A 30-minute call is the quickest way to see whether I'm the right fit for your project. No preparation needed.</p>
+        <include src="door.html" />
+    </div>
+</section>
+
+</div>
+
+</layout>

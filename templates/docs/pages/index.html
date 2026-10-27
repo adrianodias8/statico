@@ -1,0 +1,22 @@
+<layout src="base.html" title="{site.name} documentation">
+<main id="main" class="cover">
+    <div class="cover__showing">
+        <h1>{site.name}</h1>
+        <div class="cover__caption">
+            <p>{site.description}</p>
+            <p class="cover__start"><ForEach content="docs" as="d" orderBy="order" count="1"><a class="start-link" href="{d.url}">Start with {d.title}</a></ForEach></p>
+        </div>
+    </div>
+    <h2 class="visually-hidden">Contents</h2>
+    <ol class="bands">
+        <ForEach collection="sections" as="s">
+        <li class="band band--{s.hue}">
+            <h3 class="band__title"><span class="band__no">{loop}</span>{s.title}</h3>
+            <ol class="band__pages">
+                <ForEach content="docs" as="d" where="d.section == s.name" orderBy="order"><li><a href="{d.url}"><span class="band__page-no">{d.order}</span><span class="band__page">{d.title}</span><span class="band__about">{d.description}</span></a></li></ForEach>
+            </ol>
+        </li>
+        </ForEach>
+    </ol>
+</main>
+</layout>

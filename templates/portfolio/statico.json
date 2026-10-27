@@ -1,0 +1,15 @@
+{
+  "site": {
+    "name": "Adriano Dias",
+    "description": "Freelance web developer in Brussels. Drupal, Laravel and static sites, built and maintained properly.",
+    "author": "Adriano Dias",
+    "language": "en",
+    "image": "/assets/images/adriano.jpg",
+    "email": "adrianodias1994@gmail.com",
+    "booking": "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0ea5HQHBkEcqXWH-r0iys6X-8DQxjBq32xYaI3j_MqxJovI_ueIeOEOSsin3ANab-HGa6GSAjO?gv=true",
+    "github": "https://github.com/adrianodias8"
+  },
+  "markdown": { "highlight": "base16-eighties.dark" },
+  "feeds": [{ "content": "writing", "title": "Adriano Dias · Writing" }],
+  "schemas": { "writing": { "title": "string", "date": "date", "description": "string" } }
+}

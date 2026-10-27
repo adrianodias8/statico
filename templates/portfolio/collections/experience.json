@@ -1,0 +1,26 @@
+[
+  {
+    "dates": "2024 – now",
+    "role": "Freelance Web Developer",
+    "company": "Randstad Digital Belgium, leading partner of the Inline Consortium",
+    "about": "Custom full-stack web solutions in PHP, Drupal and Laravel: working closely with clients, integrating APIs, tuning performance, and maintaining what ships."
+  },
+  {
+    "dates": "2020 – 2024",
+    "role": "Drupal Developer",
+    "company": "ATS4IT",
+    "about": "Maintained and extended sites as needs changed, built reusable Drupal and Laravel components, and supported the move from Drupal 7 to Drupal 8."
+  },
+  {
+    "dates": "2018 – 2020",
+    "role": "Drupal Developer",
+    "company": "AGAP2IT Portugal",
+    "about": "Maintained and extended sites, built reusable Drupal and Laravel components, and supported Drupal 7 to 8 migrations."
+  },
+  {
+    "dates": "2012 – 2018",
+    "role": "Drupal Developer",
+    "company": "Pictonio",
+    "about": "Built and maintained cross-browser Drupal 7 and 8 sites with remote teams: e-commerce, social and corporate platforms."
+  }
+]

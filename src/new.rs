@@ -4,6 +4,44 @@ use anyhow::{Context, Result, bail};
 use std::io::{Cursor, Read};
 use std::path::{Component, Path, PathBuf};
 
+mod embedded {
+    include!(concat!(env!("OUT_DIR"), "/templates.rs"));
+}
+
+/// A template that ships inside the binary (from `templates/` in the repo).
+pub struct Builtin {
+    pub slug: &'static str,
+    pub about: &'static str,
+}
+
+pub const BUILTINS: &[Builtin] = &[
+    Builtin {
+        slug: "portfolio",
+        about: "Freelancer portfolio: services, experience, projects, writing",
+    },
+    Builtin {
+        slug: "blog",
+        about: "Blog: posts, tags, pagination, feed",
+    },
+    Builtin {
+        slug: "docs",
+        about: "Documentation: sidebar, on-this-page, search, prev/next",
+    },
+];
+
+/// The files of a built-in template, if `spec` names one.
+pub fn builtin(spec: &str) -> Option<&'static [(&'static str, &'static [u8])]> {
+    let spec = spec
+        .trim()
+        .trim_start_matches("--template=")
+        .trim_start_matches("--");
+    embedded::EMBEDDED
+        .iter()
+        .find(|(name, _)| *name == spec)
+        .map(|(_, files)| *files)
+}
+
+/// Templates downloaded from GitHub (DevDojo's, made for Static).
 pub struct Template {
     pub slug: &'static str,
     pub repo: &'static str,
@@ -25,11 +63,6 @@ pub const TEMPLATES: &[Template] = &[
         slug: "boxed",
         repo: "static-templates/boxed",
         about: "Boxed landing page",
-    },
-    Template {
-        slug: "blog",
-        repo: "static-templates/blog",
-        about: "Markdown blog",
     },
     Template {
         slug: "stone",
@@ -131,6 +164,17 @@ pub fn extract(zip_bytes: &[u8], dest: &Path) -> Result<usize> {
     Ok(n)
 }
 
+fn write_builtin(files: &[(&str, &[u8])], dest: &Path) -> Result<usize> {
+    for (rel, bytes) in files {
+        let target = dest.join(rel);
+        if let Some(p) = target.parent() {
+            std::fs::create_dir_all(p)?;
+        }
+        std::fs::write(&target, bytes).with_context(|| format!("writing {}", target.display()))?;
+    }
+    Ok(files.len())
+}
+
 /// Copy a local template folder, skipping VCS, dependencies and build output.
 fn copy_template_dir(src: &Path, dest: &Path) -> Result<usize> {
     let mut n = 0;
@@ -158,7 +202,13 @@ pub fn new_project(folder: &str, template: &str, install: bool) -> Result<PathBu
         bail!("`{folder}` already exists and is not empty");
     }
     let local = Path::new(template.trim_start_matches("--template="));
-    let n = if local.is_dir() {
+    // A bare name is a built-in template even if a folder of that name happens
+    // to exist here; a local folder is written as a path (`./blog`).
+    let bare = !template.contains(['/', '\\']) && !template.ends_with(".zip");
+    let n = if let (true, Some(files)) = (bare, builtin(template)) {
+        std::fs::create_dir_all(&dest)?;
+        write_builtin(files, &dest)?
+    } else if local.is_dir() {
         // A local folder (e.g. your team's own starter).
         println!("Copying template from {} …", local.display());
         std::fs::create_dir_all(&dest)?;
@@ -207,12 +257,12 @@ mod tests {
     #[test]
     fn urls() {
         assert_eq!(
-            template_zip_url("blog").unwrap(),
-            "https://github.com/static-templates/blog/archive/HEAD.zip"
+            template_zip_url("aria").unwrap(),
+            "https://github.com/static-templates/aria/archive/HEAD.zip"
         );
         assert_eq!(
-            template_zip_url("--blog").unwrap(),
-            "https://github.com/static-templates/blog/archive/HEAD.zip"
+            template_zip_url("--aria").unwrap(),
+            "https://github.com/static-templates/aria/archive/HEAD.zip"
         );
         assert_eq!(
             template_zip_url("--template=me/site").unwrap(),
@@ -223,6 +273,23 @@ mod tests {
             "https://github.com/me/site/archive/HEAD.zip"
         );
         assert!(template_zip_url("nope").is_err());
+    }
+
+    #[test]
+    fn every_builtin_is_embedded_and_described() {
+        let embedded: Vec<_> = embedded::EMBEDDED.iter().map(|(n, _)| *n).collect();
+        let described: Vec<_> = BUILTINS.iter().map(|b| b.slug).collect();
+        let mut a = embedded.clone();
+        let mut b = described.clone();
+        a.sort();
+        b.sort();
+        assert_eq!(a, b, "templates/ and BUILTINS disagree");
+        for (name, files) in embedded::EMBEDDED {
+            assert!(
+                files.iter().any(|(p, _)| *p == "pages/index.html"),
+                "{name} has no pages/index.html"
+            );
+        }
     }
 
     #[test]

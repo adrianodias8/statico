@@ -1,0 +1,12 @@
+{
+  "site": {
+    "name": "Your Project",
+    "description": "Documentation built with Statico's docs template. Say here, in one sentence, what your project does.",
+    "language": "en",
+    "repo": "https://github.com/you/your-project"
+  },
+  "build": { "search": true },
+  "markdown": { "highlight": "base16-eighties.dark" },
+  "feeds": false,
+  "schemas": { "docs": { "title": "string", "description": "string", "section": "string", "order": "number" } }
+}
