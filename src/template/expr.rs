@@ -145,13 +145,29 @@ fn tokenize(src: &str) -> Result<Vec<Tok>> {
     Ok(out)
 }
 
+/// How deep `(` and `!` may nest. The parser is recursive, so without a limit
+/// a long enough run of either overflows the stack and aborts the process
+/// instead of reporting an error.
+const MAX_DEPTH: usize = 64;
+
 struct Parser<'a, R: Resolver + ?Sized> {
     toks: Vec<Tok>,
     pos: usize,
+    depth: usize,
     r: &'a R,
 }
 
 impl<R: Resolver + ?Sized> Parser<'_, R> {
+    fn nested<T>(&mut self, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
+        if self.depth >= MAX_DEPTH {
+            bail!("condition is nested more than {MAX_DEPTH} levels deep");
+        }
+        self.depth += 1;
+        let r = f(self);
+        self.depth -= 1;
+        r
+    }
+
     fn peek_op(&self) -> Option<&'static str> {
         match self.toks.get(self.pos) {
             Some(Tok::Op(o)) => Some(o),
@@ -215,7 +231,7 @@ impl<R: Resolver + ?Sized> Parser<'_, R> {
     fn unary(&mut self) -> Result<Value> {
         if self.peek_op() == Some("!") {
             self.pos += 1;
-            let v = self.unary()?;
+            let v = self.nested(Self::unary)?;
             return Ok(Value::Bool(!truthy(&v)));
         }
         self.primary()
@@ -236,7 +252,7 @@ impl<R: Resolver + ?Sized> Parser<'_, R> {
                 _ => self.r.resolve(&id).unwrap_or(Value::Null),
             }),
             Some(Tok::LParen) => {
-                let v = self.or()?;
+                let v = self.nested(Self::or)?;
                 if self.toks.get(self.pos) != Some(&Tok::RParen) {
                     bail!("expected `)`");
                 }
@@ -255,7 +271,12 @@ pub fn eval_condition<R: Resolver + ?Sized>(src: &str, r: &R) -> Result<bool> {
     if toks.is_empty() {
         bail!("empty condition");
     }
-    let mut p = Parser { toks, pos: 0, r };
+    let mut p = Parser {
+        toks,
+        pos: 0,
+        depth: 0,
+        r,
+    };
     let v = p.or()?;
     if p.pos != p.toks.len() {
         bail!("unexpected trailing input in condition `{src}`");
@@ -352,5 +373,15 @@ mod tests {
         assert!(!ev("missing"));
         assert!(ev("missing == null"));
         assert!(ev("loop != -1"));
+    }
+
+    #[test]
+    fn nesting_is_limited() {
+        let r = R(json!({}));
+        let ok = format!("{}1{}", "(".repeat(MAX_DEPTH), ")".repeat(MAX_DEPTH));
+        assert!(eval_condition(&ok, &r).unwrap());
+        let deep = format!("({ok})");
+        let err = eval_condition(&deep, &r).unwrap_err().to_string();
+        assert!(err.contains("nested more than"), "{err}");
     }
 }
