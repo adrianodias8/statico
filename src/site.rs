@@ -25,7 +25,7 @@ pub enum Tailwind {
     V3,
     /// `@import "tailwindcss";`
     V4,
-    /// No `assets/css/main.css`.
+    /// No `assets/css/main.css`, or plain CSS with no Tailwind directive.
     None,
 }
 
@@ -741,7 +741,8 @@ impl Site {
             self.base_url.as_str()
         };
         let compiled = self.css_compiled.load(std::sync::atomic::Ordering::Relaxed);
-        let replacement = if self.mode == Mode::Build && compiled {
+        let plain = self.tailwind == Tailwind::None;
+        let replacement = if plain || (self.mode == Mode::Build && compiled) {
             format!("<link href=\"{asset_base}/assets/css/main.css\" rel=\"stylesheet\">")
         } else {
             self.tailwind_cdn()
@@ -1007,17 +1008,32 @@ fn pagination_value(url: &str, page: usize, total: usize) -> Value {
     })
 }
 
+/// Which Tailwind `assets/css/main.css` is written for. A stylesheet with no
+/// Tailwind directive is plain CSS: it is copied as written, never compiled,
+/// so a site that doesn't use Tailwind never downloads it.
 pub fn detect_tailwind(root: &Path) -> Tailwind {
-    match std::fs::read_to_string(root.join("assets/css/main.css")) {
-        Err(_) => Tailwind::None,
-        Ok(css)
-            if css
-                .lines()
-                .any(|l| l.trim_start().starts_with("@tailwind ")) =>
-        {
-            Tailwind::V3
-        }
-        Ok(_) => Tailwind::V4,
+    let Ok(css) = std::fs::read_to_string(root.join("assets/css/main.css")) else {
+        return Tailwind::None;
+    };
+    let lines = || css.lines().map(str::trim_start);
+    if lines().any(|l| l.starts_with("@tailwind ")) {
+        return Tailwind::V3;
+    }
+    const V4: &[&str] = &[
+        "@import \"tailwindcss",
+        "@import 'tailwindcss",
+        "@theme",
+        "@plugin",
+        "@source",
+        "@utility",
+        "@custom-variant",
+        "@config",
+        "@apply",
+    ];
+    if lines().any(|l| V4.iter().any(|d| l.starts_with(d))) {
+        Tailwind::V4
+    } else {
+        Tailwind::None
     }
 }
 
@@ -1159,6 +1175,30 @@ pub fn insert_before(html: &str, needle: &str, insert: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tailwind_only_when_the_css_asks_for_it() {
+        let d = tempfile::tempdir().unwrap();
+        let css = d.path().join("assets/css");
+        std::fs::create_dir_all(&css).unwrap();
+        let detect = |src: &str| {
+            std::fs::write(css.join("main.css"), src).unwrap();
+            detect_tailwind(d.path())
+        };
+        assert_eq!(
+            detect(":root { --ink: #111; }\nbody { color: var(--ink); }"),
+            Tailwind::None
+        );
+        assert_eq!(
+            detect("@tailwind base;\n@tailwind utilities;"),
+            Tailwind::V3
+        );
+        assert_eq!(
+            detect("@import \"tailwindcss\";\n.x { color: red; }"),
+            Tailwind::V4
+        );
+        assert_eq!(detect("@theme {\n  --color-ink: #111;\n}"), Tailwind::V4);
+    }
 
     #[test]
     fn routes() {

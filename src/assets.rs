@@ -179,7 +179,8 @@ fn run(tool: &Tool, root: &Path, extra: &[String]) -> Result<()> {
 /// Returns Ok(false) if no compiler was available (caller falls back to CDN).
 pub fn build_css(site: &Site, out_dir: &Path) -> Result<bool> {
     let input = site.root.join("assets/css/main.css");
-    if !input.is_file() {
+    // Plain CSS was already copied with the rest of assets/.
+    if !input.is_file() || site.tailwind == Tailwind::None {
         return Ok(false);
     }
     let Some(tool) = find_tailwind(&site.root, site.tailwind) else {
