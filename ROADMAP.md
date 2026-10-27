@@ -31,6 +31,23 @@ output folder; `--watch`.
 **Distribution** — release workflow for 5 targets, `curl | sh` installer,
 npm wrapper, Homebrew formula template (fill in the repository name).
 
+## Since 0.1 (unreleased)
+
+**Security** — managed Tailwind and esbuild downloads are checked against
+pinned SHA-256 hashes before anything is written or run. Only `PUBLIC_` keys
+from `.env` reach templates (as in Vite and Astro), and `statico check` fails
+(`S108`) if any other key's value appears anywhere in the output.
+*Breaking:* templates reading `{env.KEY}` without the prefix now get a
+warning (`S109`) naming the key to rename.
+
+**Testing** — property tests for the condition language (checked against an
+independent evaluator), the tag scanner and the `<ForEach>`/`<If>` parser;
+snapshots of every file the fixture site builds.
+
+**Fixes** — a deadlock when several pages shared a content collection;
+deeply nested conditions aborting the process instead of erroring;
+`<include>` tags left raw in `{post.html}` and in Atom feeds.
+
 ## Next (in priority order)
 
 1. **Image pipeline** — resize to several widths, WebP/AVIF, `srcset`/`sizes`
@@ -39,7 +56,8 @@ npm wrapper, Homebrew formula template (fill in the repository name).
    exposed as `{slot}`, usable from markdown. *(#9)*
 3. **On-disk build cache** — hash every input and skip unchanged pages, so
    100k-page sites rebuild in seconds. Today a full 1,000-page build takes about
-   a second, so this matters only at scale. *(#10)*
+   a second, so this matters only past roughly 10k pages; slots stay ahead of
+   it because every user meets them on day one. *(#10)*
 4. **OG image generation** — a small HTML/CSS template rendered to PNG per page
    (resvg), no headless browser. *(#12)*
 5. **`statico cms init`** — generate Decap/Sveltia/Pages CMS config from content
@@ -48,7 +66,7 @@ npm wrapper, Homebrew formula template (fill in the repository name).
 7. **i18n** — `i18n/<lang>.toml` strings with `{name}` placeholders and
    language-prefixed routes. *(#14)*
 8. **`statico dev --json`** — NDJSON events (rebuilds, errors) for agents watching the server.
-9. **Checksums** for managed tool downloads, and Subresource Integrity hashes for assets.
+9. **Subresource Integrity** hashes for fingerprinted CSS and JS.
 10. **Optional `statico mcp`** — a thin wrapper over the JSON commands for chat
     clients that have no terminal. Deliberately last: agents with a shell are
     better served by the CLI.
@@ -58,8 +76,8 @@ npm wrapper, Homebrew formula template (fill in the repository name).
 - Template syntax, folder conventions and `statico.json` keys are stable within a
   major version; deprecations warn for at least one minor release with a code
   and a fix hint before anything is removed.
-- Every release is checked against the fixture sites with `statico diff`; a
-  change in output is called out in the changelog.
+- Every file the fixture site builds is snapshot-tested, so any change in
+  output fails CI until it is reviewed; a change is called out in the changelog.
 - Users can do the same: build with the old and new version into two folders
   and run `statico diff old new`.
 
