@@ -28,7 +28,7 @@ Special pages:
 ## cli
 
 ```
-statico new <folder> [--template portfolio|blog|docs|starter|aria|boxed|stone|owner/repo|./dir|file.zip]
+statico new <folder> [--template blog|docs|starter|aria|boxed|stone|owner/repo|./dir|file.zip]
 statico init                     turn the current folder into a Statico project
 statico dev [--port 3000] [--open]
 statico build [url] [--out dir] [--no-minify] [--skip-tools]
@@ -50,13 +50,12 @@ Global flags: `--json` (one machine-readable JSON object on stdout),
 
 ## templates
 
-Three templates ship inside the binary, so `statico new` works offline and always
+Two templates ship inside the binary, so `statico new` works offline and always
 matches the version you run. Each is plain HTML and CSS with self-hosted fonts,
 no build tools, and passes `statico check --strict`:
 
 | Template | What it is |
 |---|---|
-| `portfolio` | A freelancer's site set as a Brussels shopfront: services, experience, a project, writing, booking a call |
 | `blog` | A blog framed as a railway timetable: posts as departures, tags as coloured lines, a calm reading column, a feed |
 | `docs` | Documentation framed as a type-specimen book: a sidebar built from front matter, an outline, search, previous and next |
 

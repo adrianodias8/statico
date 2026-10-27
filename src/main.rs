@@ -29,7 +29,7 @@ enum Cmd {
     New {
         /// Folder to create
         folder: String,
-        /// Template: portfolio, blog, docs (built in), starter, aria, boxed, stone, owner/repo, a GitHub URL, a local folder or .zip
+        /// Template: blog, docs (built in), starter, aria, boxed, stone, owner/repo, a GitHub URL, a local folder or .zip
         #[arg(short, long, default_value = "starter")]
         template: String,
         /// Don't run `npm install` afterwards

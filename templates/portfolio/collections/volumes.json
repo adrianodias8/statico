@@ -1,9 +1,0 @@
-[
-  { "id": "services", "no": "01", "file": "services.cfg", "name": "Services" },
-  { "id": "experience", "no": "02", "file": "experience.log", "name": "Experience" },
-  { "id": "projects", "no": "03", "file": "projects.vol", "name": "Projects" },
-  { "id": "writing", "no": "04", "file": "writing.txt", "name": "Writing" },
-  { "id": "profile", "no": "05", "file": "profile.sys", "name": "Profile" },
-  { "id": "contact", "no": "06", "file": "contact.app", "name": "Contact" },
-  { "id": "terminal", "no": "07", "file": "terminal", "name": "Terminal" }
-]

@@ -16,10 +16,6 @@ pub struct Builtin {
 
 pub const BUILTINS: &[Builtin] = &[
     Builtin {
-        slug: "portfolio",
-        about: "Freelancer portfolio: services, experience, projects, writing",
-    },
-    Builtin {
         slug: "blog",
         about: "Blog: posts, tags, pagination, feed",
     },

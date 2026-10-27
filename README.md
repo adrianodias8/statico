@@ -83,7 +83,7 @@ The full reference ships in the binary: `statico docs`, `statico docs loops`,
 
 | Command | |
 |---|---|
-| `statico new <dir> [--template portfolio\|blog\|docs\|owner/repo\|./dir]` | new site from a template |
+| `statico new <dir> [--template blog\|docs\|owner/repo\|./dir]` | new site from a template |
 | `statico init` | turn the current folder into a site |
 | `statico dev [--port] [--open]` | dev server, live reload, error overlay |
 | `statico build [url] [--watch]` | production build into `_site/` |
