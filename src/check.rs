@@ -100,10 +100,13 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
 
     let mut errors = Vec::new();
     // `check` builds with relative URLs on purpose; that feed warning is noise here.
+    // S109 is dropped too: it is derived from the output below, page by page,
+    // rather than taken from the build's process-wide warning list.
     let mut warnings: Vec<Diagnostic> = report
         .warnings
         .iter()
         .filter(|w| !w.message.contains("feed links are relative"))
+        .filter(|w| w.code != Some("S109"))
         .cloned()
         .collect();
     let mut id_cache: HashMap<PathBuf, HashSet<String>> = HashMap::new();
@@ -162,18 +165,23 @@ pub fn check(root: &Path, url: Option<String>, strict: bool) -> Result<CheckRepo
         }
         // Unresolved placeholders outside <script>.
         let visible = strip_scripts(&html);
-        for m in UNRESOLVED
-            .find_iter(&visible)
-            // The build already reported private `.env` keys as S109.
-            .filter(|m| !is_private_env_ref(m.as_str()))
-            .take(5)
-        {
-            warnings.push(issue(
-                "warning",
-                "S106",
-                label,
-                format!("unresolved placeholder `{}`", m.as_str()),
-            ));
+        for m in UNRESOLVED.find_iter(&visible).take(5) {
+            let p = m.as_str();
+            warnings.push(if is_private_env_ref(p) {
+                issue(
+                    "warning",
+                    "S109",
+                    label,
+                    format!("`{p}` is not available to templates; only PUBLIC_ keys from .env are"),
+                )
+            } else {
+                issue(
+                    "warning",
+                    "S106",
+                    label,
+                    format!("unresolved placeholder `{p}`"),
+                )
+            });
         }
 
         for t in find_tags(&html, &["a", "link", "img", "script", "source", "iframe"]) {
