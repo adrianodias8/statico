@@ -1,0 +1,29 @@
+---
+source: tests/snapshots.rs
+expression: text
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Not found · Kitchen Sink</title>
+    <meta name="description" content="Every Statico feature on one site">
+<link rel="canonical" href="https://example.com/404.html">
+<meta property="og:title" content="Not found">
+<meta property="og:description" content="Every Statico feature on one site">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://example.com/404.html">
+<meta property="og:site_name" content="Kitchen Sink">
+<meta property="og:locale" content="en">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Not found">
+<meta name="twitter:description" content="Every Statico feature on one site">
+<link rel="alternate" type="application/atom+xml" title="Kitchen Sink · Blog" href="https://example.com/blog/feed.xml">
+
+</head>
+<body>
+    <nav><a href="https://example.com/">Home</a><a href="https://example.com/blog/">Blog</a><a href="https://example.com/docs/">Docs</a></nav>
+
+    <h1>Nothing at /404.html</h1>
+</body>
+</html>

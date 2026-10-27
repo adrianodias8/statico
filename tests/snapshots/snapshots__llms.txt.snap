@@ -1,0 +1,19 @@
+---
+source: tests/snapshots.rs
+expression: text
+---
+# Kitchen Sink
+
+> Every Statico feature on one site
+
+## Pages
+
+- [Home](https://example.com/): Every Statico feature on one site
+- [Blog](https://example.com/blog/): Every Statico feature on one site
+- [Docs](https://example.com/docs/): Every Statico feature on one site
+- [Docs](https://example.com/documentation/): Every Statico feature on one site
+
+## Blog
+
+- [First post](https://example.com/blog/first.md): The very first post
+- [Second post](https://example.com/blog/second.md): Every Statico feature on one site

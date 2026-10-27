@@ -1,0 +1,46 @@
+---
+source: tests/snapshots.rs
+assertion_line: 57
+expression: text
+---
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Kitchen Sink · Blog</title>
+  <subtitle>Every Statico feature on one site</subtitle>
+  <link href="https://example.com/blog/feed.xml" rel="self"/>
+  <link href="https://example.com/"/>
+  <id>https://example.com/blog/feed.xml</id>
+  <updated>2024-03-02T00:00:00Z</updated>
+  <author><name>Ada</name></author>
+  <generator>Statico</generator>
+  <entry>
+    <title>Second post</title>
+    <link href="https://example.com/blog/second/"/>
+    <id>https://example.com/blog/second/</id>
+    <published>2024-03-02T00:00:00Z</published>
+    <updated>2024-03-02T00:00:00Z</updated>
+    <content type="html">&lt;p&gt;Hello &lt;span class=&quot;badge&quot;&gt;inline&lt;/span&gt;
+&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <title>First post</title>
+    <link href="https://example.com/blog/first/"/>
+    <id>https://example.com/blog/first/</id>
+    <published>2024-01-10T00:00:00Z</published>
+    <updated>2024-01-10T00:00:00Z</updated>
+    <summary>The very first post</summary>
+    <content type="html">&lt;ul class=&quot;toc&quot;&gt;&lt;li&gt;&lt;a href=&quot;#getting-started&quot;&gt;Getting started&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;#getting-started-1&quot;&gt;Getting started&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;
+&lt;h2 id=&quot;getting-started&quot;&gt;Getting started&lt;/h2&gt;
+&lt;p&gt;Some &lt;em&gt;markdown&lt;/em&gt; with a table:&lt;/p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;a&lt;/th&gt;&lt;th&gt;b&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;2&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
+&lt;h2 id=&quot;getting-started-1&quot;&gt;Getting started&lt;/h2&gt;
+&lt;p&gt;Duplicate heading gets a unique id. Literal braces: {post.title} and {frontmatter.title} stay as written.&lt;/p&gt;
+&lt;pre data-lang=&quot;html&quot; style=&quot;background-color:#2b303b;&quot;&gt;
+&lt;span style=&quot;color:#c0c5ce;&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;include &lt;/span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;src&lt;/span&gt;&lt;span style=&quot;color:#c0c5ce;&quot;&gt;=&amp;quot;&lt;/span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;card.html&lt;/span&gt;&lt;span style=&quot;color:#c0c5ce;&quot;&gt;&amp;quot;&amp;gt;&amp;lt;/&lt;/span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;include&lt;/span&gt;&lt;span style=&quot;color:#c0c5ce;&quot;&gt;&amp;gt;
+&lt;/span&gt;&lt;/pre&gt;
+</content>
+  </entry>
+</feed>

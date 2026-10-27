@@ -1,0 +1,4 @@
+# Fixtures and snapshots are compared byte for byte; keep them exactly as
+# committed (LF, no conversion) on every platform, Windows included.
+tests/fixtures/** -text
+tests/snapshots/** -text

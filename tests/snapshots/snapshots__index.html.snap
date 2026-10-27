@@ -1,0 +1,51 @@
+---
+source: tests/snapshots.rs
+expression: text
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home · Kitchen Sink</title>
+    <meta name="description" content="Every Statico feature on one site">
+<link rel="canonical" href="https://example.com/">
+<meta property="og:title" content="Home">
+<meta property="og:description" content="Every Statico feature on one site">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://example.com/">
+<meta property="og:site_name" content="Kitchen Sink">
+<meta property="og:locale" content="en">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Home">
+<meta name="twitter:description" content="Every Statico feature on one site">
+<link rel="alternate" type="application/atom+xml" title="Kitchen Sink · Blog" href="https://example.com/blog/feed.xml">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Kitchen Sink","url":"https://example.com/"}</script>
+
+</head>
+<body>
+    <nav><a href="https://example.com/" class="active">Home</a><a href="https://example.com/blog/">Blog</a><a href="https://example.com/docs/">Docs</a></nav>
+
+    
+<h1>hello from .env</h1>
+<ul class="team">
+
+  <li data-first="true">1. Grace (45) (no skills listed)</li>
+
+  <li data-first="false">2. Ada (36) #math #engines</li>
+
+</ul>
+<h2>Latest posts</h2>
+
+  <article><a href="/blog/second">Second post</a> · <time>Mar 2024</time> SECOND POST none</article>
+
+  <article><a href="/blog/first">First post</a> ★ <time>Jan 2024</time> FIRST POST none</article>
+
+<div class="card"><h3>Card</h3><span class="badge">New</span>
+</div>
+
+<ul class="prices"><li>Free: 0</li><li>Pro: 12.5</li></ul>
+<ul class="tags"><li><a href="/tags/web/">web (2)</a></li><li><a href="/tags/rust/">Rust (1)</a></li></ul>
+<script>const menu = [{"title":"Home","link":"/"},{"title":"Blog","link":"/blog/"},{"title":"Docs","link":"/docs/"}]; const obj = {open: true}; if (x) {y}</script>
+
+</body>
+</html>

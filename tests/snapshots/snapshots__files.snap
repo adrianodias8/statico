@@ -1,0 +1,22 @@
+---
+source: tests/snapshots.rs
+expression: manifest
+---
+404.html
+assets/images/x.png
+blog/feed.xml
+blog/first.md
+blog/first/index.html
+blog/index.html
+blog/page/2/index.html
+blog/second.md
+blog/second/index.html
+docs/index.html
+documentation/index.html
+index.html
+llms-full.txt
+llms.txt
+robots.txt
+sitemap.xml
+tags/rust/index.html
+tags/web/index.html

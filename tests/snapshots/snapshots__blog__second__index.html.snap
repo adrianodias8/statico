@@ -1,0 +1,38 @@
+---
+source: tests/snapshots.rs
+expression: text
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Second post · Kitchen Sink</title>
+    <meta name="description" content="Every Statico feature on one site">
+<link rel="canonical" href="https://example.com/blog/second/">
+<meta property="og:title" content="Second post">
+<meta property="og:description" content="Every Statico feature on one site">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://example.com/blog/second/">
+<meta property="og:site_name" content="Kitchen Sink">
+<meta property="og:locale" content="en">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Second post">
+<meta name="twitter:description" content="Every Statico feature on one site">
+<meta property="article:published_time" content="2024-03-02T00:00:00Z">
+<link rel="alternate" type="application/atom+xml" title="Kitchen Sink · Blog" href="https://example.com/blog/feed.xml">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Second post","description":"Every Statico feature on one site","url":"https://example.com/blog/second/","datePublished":"2024-03-02T00:00:00Z","author":{"@type":"Person","name":"Ada"}}</script>
+
+<script>window.toc = []; window.frontmatter = {"title":"Second post","date":"2024-03-02","tags":["web"]};</script>
+</head>
+<body>
+    <nav><a href="https://example.com/">Home</a><a href="https://example.com/blog/">Blog</a><a href="https://example.com/docs/">Docs</a></nav>
+
+    
+
+<article><p>Hello <span class="badge">inline</span>
+</p>
+</article>
+<div id="static-content" style="display:none;" data-toc="[]" data-frontmatter="{&quot;title&quot;:&quot;Second post&quot;,&quot;date&quot;:&quot;2024-03-02&quot;,&quot;tags&quot;:[&quot;web&quot;]}"></div>
+
+</body>
+</html>

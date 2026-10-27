@@ -1,0 +1,47 @@
+---
+source: tests/snapshots.rs
+expression: text
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>First post · Kitchen Sink</title>
+    <meta name="description" content="The very first post">
+<link rel="canonical" href="https://example.com/blog/first/">
+<meta property="og:title" content="First post">
+<meta property="og:description" content="The very first post">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://example.com/blog/first/">
+<meta property="og:site_name" content="Kitchen Sink">
+<meta property="og:locale" content="en">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="First post">
+<meta name="twitter:description" content="The very first post">
+<meta property="article:published_time" content="2024-01-10T00:00:00Z">
+<link rel="alternate" type="application/atom+xml" title="Kitchen Sink · Blog" href="https://example.com/blog/feed.xml">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"First post","description":"The very first post","url":"https://example.com/blog/first/","datePublished":"2024-01-10T00:00:00Z","author":{"@type":"Person","name":"Ada"}}</script>
+
+<script>window.toc = [{"content":"Getting started","slug":"getting-started","lvl":2},{"content":"Getting started","slug":"getting-started-1","lvl":2}]; window.frontmatter = {"title":"First post","date":"2024-01-10","featured":true,"tags":["Rust","web"],"description":"The very first post"};</script>
+</head>
+<body>
+    <nav><a href="https://example.com/">Home</a><a href="https://example.com/blog/">Blog</a><a href="https://example.com/docs/">Docs</a></nav>
+
+    
+<p class="featured">Featured</p>
+<article><ul class="toc"><li><a href="#getting-started">Getting started</a></li><li><a href="#getting-started-1">Getting started</a></li></ul>
+<h2 id="getting-started">Getting started</h2>
+<p>Some <em>markdown</em> with a table:</p>
+<table><thead><tr><th>a</th><th>b</th></tr></thead><tbody>
+<tr><td>1</td><td>2</td></tr>
+</tbody></table>
+<h2 id="getting-started-1">Getting started</h2>
+<p>Duplicate heading gets a unique id. Literal braces: {post.title} and {frontmatter.title} stay as written.</p>
+<pre data-lang="html" style="background-color:#2b303b;">
+<span style="color:#c0c5ce;">&lt;</span><span style="color:#bf616a;">include </span><span style="color:#d08770;">src</span><span style="color:#c0c5ce;">=&quot;</span><span style="color:#a3be8c;">card.html</span><span style="color:#c0c5ce;">&quot;&gt;&lt;/</span><span style="color:#bf616a;">include</span><span style="color:#c0c5ce;">&gt;
+</span></pre>
+</article>
+<div id="static-content" style="display:none;" data-toc="[{&quot;content&quot;:&quot;Getting started&quot;,&quot;slug&quot;:&quot;getting-started&quot;,&quot;lvl&quot;:2},{&quot;content&quot;:&quot;Getting started&quot;,&quot;slug&quot;:&quot;getting-started-1&quot;,&quot;lvl&quot;:2}]" data-frontmatter="{&quot;title&quot;:&quot;First post&quot;,&quot;date&quot;:&quot;2024-01-10&quot;,&quot;featured&quot;:true,&quot;tags&quot;:[&quot;Rust&quot;,&quot;web&quot;],&quot;description&quot;:&quot;The very first post&quot;}"></div>
+
+</body>
+</html>

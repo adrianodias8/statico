@@ -1,0 +1,32 @@
+---
+source: tests/snapshots.rs
+expression: text
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tagged Rust · Kitchen Sink</title>
+    <meta name="description" content="Every Statico feature on one site">
+<link rel="canonical" href="https://example.com/tags/rust/">
+<meta property="og:title" content="Tagged Rust">
+<meta property="og:description" content="Every Statico feature on one site">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://example.com/tags/rust/">
+<meta property="og:site_name" content="Kitchen Sink">
+<meta property="og:locale" content="en">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tagged Rust">
+<meta name="twitter:description" content="Every Statico feature on one site">
+<link rel="alternate" type="application/atom+xml" title="Kitchen Sink · Blog" href="https://example.com/blog/feed.xml">
+
+</head>
+<body>
+    <nav><a href="https://example.com/">Home</a><a href="https://example.com/blog/">Blog</a><a href="https://example.com/docs/">Docs</a></nav>
+
+    
+<h1>Rust (1)</h1>
+<a href="/blog/first/">First post</a>
+
+</body>
+</html>

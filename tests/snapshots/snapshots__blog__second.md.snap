@@ -1,0 +1,7 @@
+---
+source: tests/snapshots.rs
+expression: text
+---
+# Second post
+
+Hello <include src="badge.html" label="inline"></include>

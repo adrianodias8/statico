@@ -1,0 +1,16 @@
+---
+source: tests/snapshots.rs
+expression: text
+---
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/</loc></url>
+  <url><loc>https://example.com/blog/</loc></url>
+  <url><loc>https://example.com/blog/first/</loc></url>
+  <url><loc>https://example.com/blog/page/2/</loc></url>
+  <url><loc>https://example.com/blog/second/</loc></url>
+  <url><loc>https://example.com/docs/</loc></url>
+  <url><loc>https://example.com/documentation/</loc></url>
+  <url><loc>https://example.com/tags/rust/</loc></url>
+  <url><loc>https://example.com/tags/web/</loc></url>
+</urlset>
